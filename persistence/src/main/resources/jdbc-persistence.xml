@@ -63,9 +63,10 @@
     <bean id="saveFavoriteCategorySql" class="java.lang.String">
         <constructor-arg>
             <value>
-                <![CDATA[
-                     INSERT INTO Q_USER_CATEGORY(ACCOUNT_ID, CAT_ID) VALUES (:accountId, :catId)
-                ]]>
+                MERGE INTO Q_USER_CATEGORY
+                USING DUAL ON (ACCOUNT_ID = :accountId AND CAT_ID = :catId)
+                WHEN NOT MATCHED THEN
+                INSERT (ACCOUNT_ID, CAT_ID) VALUES (:accountId, :catId)
             </value>
         </constructor-arg>
     </bean>
@@ -73,9 +74,10 @@
     <bean id="saveUserOccupationSql" class="java.lang.String">
         <constructor-arg>
             <value>
-                <![CDATA[
-                     INSERT INTO Q_USER_OCCUPATION(ACCOUNT_ID, OCCUPATION_ID) VALUES (:accountId, :occupationId)
-                ]]>
+                MERGE INTO Q_USER_OCCUPATION
+                USING DUAL ON (ACCOUNT_ID = :accountId AND OCCUPATION_ID = :occupationId)
+                WHEN NOT MATCHED THEN
+                INSERT (ACCOUNT_ID, OCCUPATION_ID) VALUES (:accountId, :occupationId)
             </value>
         </constructor-arg>
     </bean>
@@ -85,6 +87,16 @@
             <value>
                 <![CDATA[
                      UPDATE Q_USER SET password = :password WHERE email = :email
+                ]]>
+            </value>
+        </constructor-arg>
+    </bean>
+
+    <bean id="updateUserLanguageSql" class="java.lang.String">
+        <constructor-arg>
+            <value>
+                <![CDATA[
+                     UPDATE Q_USER SET lang_id = :langId WHERE email = :email
                 ]]>
             </value>
         </constructor-arg>
@@ -191,6 +203,26 @@
                      FROM Q_USER u
                      LEFT JOIN Q_USER_ROLES ur ON u.account_id = ur.account_id
                      LEFT JOIN Q_ROLE r ON ur.role_id = r.role_id
+                ]]>
+            </value>
+        </constructor-arg>
+    </bean>
+
+    <bean id="deleteFavoriteCategoriesSql" class="java.lang.String">
+        <constructor-arg>
+            <value>
+                <![CDATA[
+                     DELETE FROM Q_USER_CATEGORY WHERE ACCOUNT_ID = :accountId AND CAT_ID in (:ids)
+                ]]>
+            </value>
+        </constructor-arg>
+    </bean>
+
+    <bean id="deleteUserOccupationsSql" class="java.lang.String">
+        <constructor-arg>
+            <value>
+                <![CDATA[
+                     DELETE FROM Q_USER_OCCUPATION WHERE ACCOUNT_ID = :accountId AND OCCUPATION_ID in (:ids)
                 ]]>
             </value>
         </constructor-arg>

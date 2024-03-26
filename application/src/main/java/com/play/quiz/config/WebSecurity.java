@@ -3,6 +3,8 @@ package com.play.quiz.config;
 import static com.play.quiz.controller.RestEndpoint.CONTEXT_PATH;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_AUTH;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_LANGUAGE;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_TRANSLATION;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 import java.util.List;
@@ -62,6 +64,8 @@ public class WebSecurity {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(REQUEST_MAPPING_AUTH + "/**").permitAll()
                         .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_CATEGORY + "/**").permitAll()
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_LANGUAGE + "/**").permitAll()
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_TRANSLATION + "/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling ->
