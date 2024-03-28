@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.play.quiz.domain.Account;
+import com.play.quiz.domain.Language;
 
 public interface UserRepository {
 
@@ -16,4 +17,6 @@ public interface UserRepository {
     void enableAccount(final Long accountId);
 
     int updateUserPassword(String userEmail, char[] password);
+
+    Boolean changeLanguage(Language language, String username);
 }

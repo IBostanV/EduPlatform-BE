@@ -2,7 +2,7 @@
 <Configuration status="DEBUG" monitorInterval="1000">
 
     <Properties>
-        <Property name="LOG1">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} [%-6p] %c{1}:%L - %m%n</Property>
+        <Property name="LOG1">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} [%-6p] %c:%L - %m%n</Property>
     </Properties>
 
     <Appenders>

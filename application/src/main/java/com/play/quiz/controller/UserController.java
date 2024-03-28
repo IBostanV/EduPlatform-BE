@@ -1,6 +1,7 @@
 package com.play.quiz.controller;
 
 import com.play.quiz.domain.Account;
+import com.play.quiz.domain.Language;
 import com.play.quiz.dto.AccountDto;
 import com.play.quiz.dto.UserOccupationDto;
 import com.play.quiz.mapper.AccountMapper;
@@ -62,5 +63,10 @@ public class UserController {
     @PostMapping(value = "/change-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void changePassword(@RequestBody PasswordInput password) {
         userService.changePassword(password);
+    }
+
+    @PostMapping(value = "/change-language")
+    public ResponseEntity<Boolean> changeLanguage(@RequestBody Language language) {
+        return ResponseEntity.ok(userService.changeLanguage(language));
     }
 }

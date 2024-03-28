@@ -51,6 +51,8 @@ public class UserRepositoryImpl implements UserRepository {
     private final String findUserRolesSql;
     private final String findUserFavoriteCategoriesSql;
     private final String findUserOccupationsSql;
+    private final String deleteFavoriteCategoriesSql;
+    private final String deleteUserOccupationsSql;
     private final String saveSql;
     private final String saveFavoriteCategorySql;
     private final String saveUserRolesSql;
@@ -58,6 +60,7 @@ public class UserRepositoryImpl implements UserRepository {
     private final String saveNoAvatarSql;
     private final String userSequenceNextVal;
     private final String updateUserPasswordSql;
+    private final String updateUserLanguageSql;
 
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedJdbcTemplate;
@@ -93,27 +96,45 @@ public class UserRepositoryImpl implements UserRepository {
             saveUserAdditionalInfo(new UserAdditionalInfo<>(
                     account.getRoles(), saveUserRolesSql, accountId, "roleId", roleIdFunction));
         } else {
-            Function<Category, Long> categoryIdFunction = Category::getCatId;
+            deleteUncheckedFavoriteCategories(account);
+
+            Function<Category, Long> categoryIdFnc = Category::getCatId;
             saveUserAdditionalInfo(new UserAdditionalInfo<>(
-                    account.getFavoriteCategories(),
-                    saveFavoriteCategorySql,
-                    accountId,
-                    "catId",
-                    categoryIdFunction));
+                    account.getFavoriteCategories(), saveFavoriteCategorySql, accountId, "catId", categoryIdFnc));
+
+            deleteUncheckedOccupations(account);
 
             Function<UserOccupation, Long> occupationIdFunction = UserOccupation::getId;
             saveUserAdditionalInfo(new UserAdditionalInfo<>(
-                    account.getFavoriteCategories(),
-                    saveUserOccupationSql,
-                    accountId,
-                    "occupationId",
-                    occupationIdFunction));
+                    account.getOccupations(), saveUserOccupationSql, accountId, "occupationId", occupationIdFunction));
         }
 
         log.info("User with id: " + accountId + " successfully saved");
         return account.toBuilder()
                 .accountId(accountId)
                 .build();
+    }
+
+    private void deleteUncheckedOccupations(Account account) {
+        Set<UserOccupation> userOccupationsToDelete = handleUserOccupations(account);
+        userOccupationsToDelete.removeAll(account.getOccupations());
+
+        if (!userOccupationsToDelete.isEmpty()) {
+            namedJdbcTemplate.update(deleteUserOccupationsSql, Map.of(
+                    "ids", userOccupationsToDelete.stream().map(UserOccupation::getId).toList(),
+                    "accountId", account.getAccountId()));
+        }
+    }
+
+    private void deleteUncheckedFavoriteCategories(final Account account) {
+        Set<Category> favoriteCategoriesToDelete = handleFavoriteCategories(account);
+        favoriteCategoriesToDelete.removeAll(account.getFavoriteCategories());
+
+        if (!favoriteCategoriesToDelete.isEmpty()) {
+            namedJdbcTemplate.update(deleteFavoriteCategoriesSql, Map.of(
+                    "ids", favoriteCategoriesToDelete.stream().map(Category::getCatId).toList(),
+                    "accountId", account.getAccountId()));
+        }
     }
 
     private <T extends Collection<?>, E extends BaseEntity> void saveUserAdditionalInfo(UserAdditionalInfo<T, E> info) {
@@ -342,5 +363,13 @@ public class UserRepositoryImpl implements UserRepository {
                     .orElseThrow(() -> new UserNotFoundException("No user found for the given email"))
                     .toBuilder().language(language).build();
         }
+    }
+
+    @Override
+    public Boolean changeLanguage(Language language, String email) {
+        int result = namedJdbcTemplate.update(updateUserLanguageSql,
+                Map.of("langId", language.getLangId(),
+                        "email", email));
+        return Objects.equals(result, 1);
     }
 }

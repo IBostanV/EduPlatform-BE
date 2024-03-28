@@ -16,6 +16,9 @@ public class LanguageServiceImpl implements LanguageService {
 
     @Override
     public List<Language> findAll() {
-        return languageRepository.findAll();
+        return languageRepository.findAll()
+                .stream()
+                .peek(language -> language.setCreatedDate(null))
+                .toList();
     }
 }

@@ -66,11 +66,6 @@ public class QuestionController {
         return ResponseEntity.ok(QuestionAttribute.values());
     }
 
-    @GetMapping(value = "/question-languages", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<Language>> getQuestionLanguages() {
-        return ResponseEntity.ok(languageService.findAll());
-    }
-
     @GetMapping(value = "/fetch-answers/{questionId}")
     public ResponseEntity<List<AnswerDto>> checkAnswers(@PathVariable Long questionId) {
         return ResponseEntity.ok(questionService.getAnswers(questionId));

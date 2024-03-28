@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.play.quiz.aop.annotation.Conditional;
 import com.play.quiz.domain.Account;
+import com.play.quiz.domain.Language;
 import com.play.quiz.domain.VerificationToken;
 import com.play.quiz.dto.AccountDto;
 import com.play.quiz.email.EmailService;
@@ -140,5 +141,11 @@ public class UserServiceImpl implements UserService {
         if (updated == 0) {
             throw new UserUpdateException("User password could not be updated");
         }
+    }
+
+    @Override
+    public Boolean changeLanguage(Language language) {
+        String userEmail = authenticationFacade.getPrincipal().getUsername();
+        return userRepository.changeLanguage(language, userEmail);
     }
 }

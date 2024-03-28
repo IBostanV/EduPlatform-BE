@@ -1,13 +1,5 @@
 package com.play.quiz.security.jwt;
 
-import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Stream;
-
 import com.play.quiz.controller.RestEndpoint;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,6 +21,16 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_LANGUAGE;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_TRANSLATION;
+
 @Log4j2
 @Component
 @RequiredArgsConstructor
@@ -47,6 +49,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(final HttpServletRequest request) {
         return (!request.getRequestURI().startsWith(RestEndpoint.CONTEXT_PATH)
                 || request.getRequestURI().startsWith(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_CATEGORY)
+                || request.getRequestURI().startsWith(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_TRANSLATION)
+                || request.getRequestURI().startsWith(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_LANGUAGE)
                 || request.getRequestURI().endsWith(ACTIVATE_ACCOUNT_LINK))
                 && !request.getRequestURI().startsWith(ACTUATOR_PATH);
     }
