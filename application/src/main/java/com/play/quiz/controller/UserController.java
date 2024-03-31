@@ -4,6 +4,7 @@ import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
 import com.play.quiz.dto.AccountDto;
 import com.play.quiz.dto.UserOccupationDto;
+import com.play.quiz.enums.UserRole;
 import com.play.quiz.mapper.AccountMapper;
 import com.play.quiz.record.PasswordInput;
 import com.play.quiz.service.UserOccupationService;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_USER;
 
@@ -46,6 +48,11 @@ public class UserController {
     @GetMapping(value = "/occupations", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<UserOccupationDto>> getOccupationList() {
         return ResponseEntity.ok(userOccupationService.getAllOccupations());
+    }
+
+    @GetMapping(value = "/get-user-roles", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Set<UserRole>> getUserRoles() {
+        return ResponseEntity.ok(userService.getUserRoles());
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

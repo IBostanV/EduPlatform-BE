@@ -1,7 +1,10 @@
 package com.play.quiz.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.play.quiz.aop.annotation.Conditional;
 import com.play.quiz.domain.Account;
@@ -11,6 +14,7 @@ import com.play.quiz.dto.AccountDto;
 import com.play.quiz.email.EmailService;
 import com.play.quiz.email.helper.EmailMessage;
 import com.play.quiz.email.helper.EmailMessageFactory;
+import com.play.quiz.enums.UserRole;
 import com.play.quiz.exception.EmailSendFailedException;
 import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.exception.UserNotFoundException;
@@ -27,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,5 +152,15 @@ public class UserServiceImpl implements UserService {
     public Boolean changeLanguage(Language language) {
         String userEmail = authenticationFacade.getPrincipal().getUsername();
         return userRepository.changeLanguage(language, userEmail);
+    }
+
+    @Override
+    public Set<UserRole> getUserRoles() {
+        Collection<GrantedAuthority> authorities = authenticationFacade.getPrincipal().getAuthorities();
+
+        return authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(UserRole::valueOf)
+                .collect(Collectors.toSet());
     }
 }
