@@ -3,16 +3,19 @@ package com.play.quiz.controller;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
 import com.play.quiz.dto.AccountDto;
+import com.play.quiz.dto.UserGroupDto;
 import com.play.quiz.dto.UserOccupationDto;
 import com.play.quiz.enums.UserRole;
 import com.play.quiz.mapper.AccountMapper;
 import com.play.quiz.record.PasswordInput;
+import com.play.quiz.service.UserGroupService;
 import com.play.quiz.service.UserOccupationService;
 import com.play.quiz.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,8 +33,9 @@ import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_USER;
 @RequestMapping(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_USER)
 @RequiredArgsConstructor
 public class UserController {
-    private final UserService userService;
     private final AccountMapper accountMapper;
+    private final UserService userService;
+    private final UserGroupService userGroupService;
     private final UserOccupationService userOccupationService;
 
     @GetMapping(value = "/get-current-user", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -53,6 +57,16 @@ public class UserController {
     @GetMapping(value = "/get-user-roles", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Set<UserRole>> getUserRoles() {
         return ResponseEntity.ok(userService.getUserRoles());
+    }
+
+    @GetMapping(value = "/get-user-groups", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Set<UserGroupDto>> getUserGroups() {
+        return ResponseEntity.ok(userGroupService.getCurrentUserGroups());
+    }
+
+    @GetMapping(value = "/friends/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Set<AccountDto>> getUserFriends(@PathVariable Long userId) {
+        return ResponseEntity.ok(userService.getUserFriends(userId));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

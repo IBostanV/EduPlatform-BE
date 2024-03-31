@@ -1,15 +1,15 @@
 package com.play.quiz.service;
 
-import com.play.quiz.domain.Message;
+import com.play.quiz.dto.MessageDto;
 
 import java.security.Principal;
 import java.util.List;
 
 public interface MessageService {
 
-    void sendPrivateMessage(final Message payload, String sessionId, final Principal principal);
+    void sendPrivateMessage(final MessageDto payload, String sessionId, final Principal principal);
 
-    Message sendPublicMessage(final Message payload, String sessionId, final Principal principal);
+    MessageDto sendPublicMessage(final MessageDto payload, String sessionId, final Principal principal);
 
-    List<Message> fetchMessageHistory(String destination, final Principal principal);
+    List<MessageDto> fetchMessageHistory(Long destination, String principalName);
 }

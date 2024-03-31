@@ -43,11 +43,11 @@ public class PQUserDetailsServiceImpl implements PQUserDetailsService {
 
     private static List<? extends GrantedAuthority> getUserAuthorities(final Account account) {
         if (CollectionUtils.isEmpty(account.getRoles())) {
-            log.info("No roles specified. Give default ["+ UserRole.ROLE_USER.name() +"] for user: "+ account.getEmail());
+            log.info("No roles specified. Give default [{}] for user: {}", UserRole.ROLE_USER.name(), account.getEmail());
             return Collections.singletonList(new SimpleGrantedAuthority(UserRole.ROLE_USER.name()));
         }
 
-        log.info("Given user roles: "+ account.getRoles());
+        log.info("Given user roles: {}", account.getRoles());
         return account.getRoles().stream()
                 .map(Role::getName)
                 .map(Enum::name)

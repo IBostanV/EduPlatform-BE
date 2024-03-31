@@ -1,11 +1,5 @@
 package com.play.quiz.service.impl;
 
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import com.play.quiz.aop.annotation.Conditional;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
@@ -21,8 +15,10 @@ import com.play.quiz.exception.UserNotFoundException;
 import com.play.quiz.exception.UserUpdateException;
 import com.play.quiz.mapper.AccountMapper;
 import com.play.quiz.record.PasswordInput;
+import com.play.quiz.repository.AccountRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.security.AuthenticationFacade;
+import com.play.quiz.service.UserGroupService;
 import com.play.quiz.service.UserService;
 import com.play.quiz.service.VerificationTokenService;
 import jakarta.mail.MessagingException;
@@ -37,18 +33,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Log4j2
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final EmailService emailService;
     private final AccountMapper accountMapper;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final EmailMessageFactory emailMessageFactory;
+    private final AccountRepository accountRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final EmailMessageFactory emailMessageFactory;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserGroupService userGroupService;
     private final VerificationTokenService verificationTokenService;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -68,7 +74,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Account findByEmail(final @NonNull String userEmail) {
-        log.debug("Find user by email: " + userEmail);
+        log.debug("Find user by email: {}", userEmail);
         return userRepository.findUserByEmail(userEmail)
                 .orElseThrow(() -> new UserNotFoundException("No user found with email: " + userEmail));
     }
@@ -120,7 +126,7 @@ public class UserServiceImpl implements UserService {
 
     private void handleEmailSending(final EmailMessage emailMessage) {
         try {
-            log.debug("Sending email to: " + emailMessage.getTo());
+            log.debug("Sending email to: {}", emailMessage.getTo());
             emailService.sendEmail(emailMessage);
         } catch (MessagingException exception) {
             log.warn(exception.getMessage());
@@ -162,5 +168,26 @@ public class UserServiceImpl implements UserService {
                 .map(GrantedAuthority::getAuthority)
                 .map(UserRole::valueOf)
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<Account> getUsersByUserGroupId(long userGroupId) {
+        Set<Long> userIdList = userGroupService.fetchUserIdsByGroupId(userGroupId);
+        return userRepository.findByUserIds(userIdList);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<AccountDto> getUserFriends(Long userId) {
+        Optional<Account> account = accountRepository.findById(userId);
+
+        if (account.isPresent()) {
+            AccountDto accountDto = accountMapper.toDto(account.get());
+            return accountDto.getFriends();
+        } else {
+            log.info("No user found with id: {}", userId);
+            return Collections.emptySet();
+
+        }
     }
 }

@@ -10,6 +10,7 @@ import com.play.quiz.domain.helpers.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -82,6 +83,13 @@ public class Account extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "OCCUPATION_ID"))
     @ToString.Exclude
     private Set<UserOccupation> occupations = new HashSet<>();
+
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @JoinTable(name = "Q_USER_FRIEND",
+            joinColumns = @JoinColumn(name = "USER_ID"),
+            inverseJoinColumns = @JoinColumn(name = "FRIEND_ID"))
+    @ToString.Exclude
+    private Set<Account> friends = new HashSet<>();
 
     public void enable() { this.isEnabled = true; }
 

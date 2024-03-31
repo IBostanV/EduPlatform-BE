@@ -9,9 +9,7 @@ public interface CategoryService {
 
     CategoryDto save(final CategoryDto category, MultipartFile avatar);
 
-    CategoryDto getById(final Long categoryId);
-
-    CategoryDto getByNaturalId(String categoryName);
+    CategoryDto getById(final Long categoryId, final String naturalId);
 
     void deleteById(final Long categoryId);
 

@@ -74,13 +74,13 @@ class AuthenticationServiceImplTest {
         final AccountInfo accountInfo = AccountInfoFixture.getAccountInfo();
         final Account adminAccount = AccountFixture.getAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
-                accountInfo.getAccount().getEmail(),
-                new String(accountInfo.getAccount().getPassword()));
+                accountInfo.account().getEmail(),
+                new String(accountInfo.account().getPassword()));
 
         commonWhenClauses(accountInfo, adminAccount, authentication);
-        when(userService.findByEmail(accountInfo.getAccount().getEmail())).thenReturn(adminAccount);
+        when(userService.findByEmail(accountInfo.account().getEmail())).thenReturn(adminAccount);
 
-        AccountInfo result = authenticationService.login(accountInfo.getAccount());
+        AccountInfo result = authenticationService.login(accountInfo.account());
 
         DefaultCapture captures = defaultCaptures();
         Mockito.verify(userService).findByEmail(accountCaptor.capture());
@@ -90,9 +90,9 @@ class AuthenticationServiceImplTest {
         assertEquals(captures.getAccount(), adminAccount);
         assertEquals(captures.getAuthentication(), authentication);
         assertEquals(captures.getUsernamePasswordAuthenticationToken(), authentication);
-        assertEquals(userEmail, accountInfo.getAccount().getEmail());
+        assertEquals(userEmail, accountInfo.account().getEmail());
 
-        verify(userService, only()).findByEmail(accountInfo.getAccount().getEmail());
+        verify(userService, only()).findByEmail(accountInfo.account().getEmail());
         verify(jwtProvider, only()).generate(authentication);
         verify(accountMapper, only()).toDto(adminAccount);
         verify(authenticationManager, only()).authenticate(any());
@@ -102,7 +102,7 @@ class AuthenticationServiceImplTest {
     void given_disabled_account_when_login_then_AccountDisabledException_thrown() {
         final AccountDto account = AccountInfoFixture
                 .getAccountInfoWithDisabledAccount()
-                .getAccount();
+                .account();
         final Account adminAccount = AccountFixture.getDisabledAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
                 account.getEmail(),
@@ -127,7 +127,7 @@ class AuthenticationServiceImplTest {
     void given_account_no_email_when_login_then_exception() {
         final AccountDto account = AccountInfoFixture
                 .getAccountInfoWithNoEmailAccount()
-                .getAccount();
+                .account();
         final Account adminAccount = AccountFixture.getDisabledAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
                 account.getEmail(), account.getPassword());
@@ -148,17 +148,17 @@ class AuthenticationServiceImplTest {
     @Test
     void given_valid_account_when_register_then_return_AccountInfo() {
         final AccountInfo accountInfo = AccountInfoFixture.getAccountInfo();
-        final AccountDto accountDto = accountInfo.getAccount();
+        final AccountDto accountDto = accountInfo.account();
         final Account adminAccount = AccountFixture.getAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
-                accountInfo.getAccount().getEmail(),
-                new String(accountInfo.getAccount().getPassword()));
+                accountInfo.account().getEmail(),
+                new String(accountInfo.account().getPassword()));
 
         commonWhenClauses(accountInfo, adminAccount, authentication);
-        when(userService.userExists(accountInfo.getAccount())).thenReturn(false);
+        when(userService.userExists(accountInfo.account())).thenReturn(false);
         when(userService.save(accountDto)).thenReturn(adminAccount);
 
-        AccountInfo result = authenticationService.register(accountInfo.getAccount());
+        AccountInfo result = authenticationService.register(accountInfo.account());
 
         DefaultCapture captures = defaultCaptures();
 
@@ -175,18 +175,18 @@ class AuthenticationServiceImplTest {
     @Test
     void given_valid_account_when_register_with_email_then_return_AccountInfo() {
         final AccountInfo accountInfo = AccountInfoFixture.getAccountInfo();
-        final AccountDto accountDto = accountInfo.getAccount();
+        final AccountDto accountDto = accountInfo.account();
         final Account adminAccount = AccountFixture.getAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
-                accountInfo.getAccount().getEmail(),
-                new String(accountInfo.getAccount().getPassword()));
+                accountInfo.account().getEmail(),
+                new String(accountInfo.account().getPassword()));
 
         commonWhenClauses(accountInfo, adminAccount, authentication);
-        when(userService.userExists(accountInfo.getAccount())).thenReturn(false);
+        when(userService.userExists(accountInfo.account())).thenReturn(false);
         when(userService.save(accountDto)).thenReturn(adminAccount);
         doNothing().when(userService).sendAccountVerificationEmail(adminAccount);
 
-        AccountInfo result = authenticationService.register(accountInfo.getAccount());
+        AccountInfo result = authenticationService.register(accountInfo.account());
 
         DefaultCapture captures = defaultCaptures();
 
@@ -204,11 +204,11 @@ class AuthenticationServiceImplTest {
     @Test
     void given_existing_account_when_userExists_then_DuplicateUserException_thrown() {
         final AccountInfo accountInfo = AccountInfoFixture.getAccountInfo();
-        final AccountDto accountDto = accountInfo.getAccount();
+        final AccountDto accountDto = accountInfo.account();
         final Account adminAccount = AccountFixture.getAdminAccount();
         final Authentication authentication = new UsernamePasswordAuthenticationToken(
-                accountInfo.getAccount().getEmail(),
-                accountInfo.getAccount().getPassword());
+                accountInfo.account().getEmail(),
+                accountInfo.account().getPassword());
 
         when(userService.userExists(accountDto)).thenReturn(true);
 
@@ -234,8 +234,8 @@ class AuthenticationServiceImplTest {
     }
 
     private void commonWhenClauses(final AccountInfo accountInfo, final Account adminAccount, final Authentication authentication) {
-        when(jwtProvider.generate(any())).thenReturn(accountInfo.getJwtToken());
-        when(accountMapper.toDto(adminAccount)).thenReturn(accountInfo.getAccount());
+        when(jwtProvider.generate(any())).thenReturn(accountInfo.jwtToken());
+        when(accountMapper.toDto(adminAccount)).thenReturn(accountInfo.account());
         when(authenticationManager.authenticate(authentication)).thenReturn(authentication);
     }
 

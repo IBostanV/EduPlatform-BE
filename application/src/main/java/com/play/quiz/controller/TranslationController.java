@@ -20,7 +20,7 @@ public class TranslationController {
     private final TranslationService translationService;
 
     @GetMapping(value = "/{langCode}")
-    public ResponseEntity<Map<String, String>> test(@PathVariable(value = "langCode") String langCode) {
+    public ResponseEntity<Map<String, String>> translate(@PathVariable(value = "langCode") String langCode) {
         return ResponseEntity.ok(translationService.translate(langCode));
     }
 }

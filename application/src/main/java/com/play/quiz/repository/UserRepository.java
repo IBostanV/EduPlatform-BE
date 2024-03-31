@@ -1,10 +1,11 @@
 package com.play.quiz.repository;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public interface UserRepository {
 
@@ -19,4 +20,6 @@ public interface UserRepository {
     int updateUserPassword(String userEmail, char[] password);
 
     Boolean changeLanguage(Language language, String username);
+
+    Set<Account> findByUserIds(Set<Long> userIdList);
 }

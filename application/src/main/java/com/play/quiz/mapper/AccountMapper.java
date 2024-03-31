@@ -44,6 +44,7 @@ public abstract class AccountMapper {
     @Mapping(target = "isEnabled", source = "enabled")
     @Mapping(target = "createdBy.accountId", source = "createdById")
     @Mapping(target = "updatedBy.accountId", source = "updatedById")
+    @Mapping(target = "friends", ignore = true)
     public abstract Account toEntity(final AccountDto accountDto, @Context final MultipartFile avatar);
 
     @Named("handlePassword")

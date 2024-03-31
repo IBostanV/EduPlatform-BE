@@ -27,7 +27,9 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendEmail(final EmailMessage emailMessage) throws MessagingException {
         MimeMessage mimeMessage = configureEmailMessage(emailMessage);
-        if (emailEnabled) emailSender.send(mimeMessage);
+        if (emailEnabled) {
+            emailSender.send(mimeMessage);
+        }
     }
 
     private MimeMessage configureEmailMessage(final EmailMessage emailMessage) throws MessagingException {
@@ -39,7 +41,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private void configureEmailMessage(final EmailMessage emailMessage, final MimeMessageHelper mimeMessageHelper) throws MessagingException {
-        log.debug("Configure MailMessage using email message: " + emailMessage);
+        log.debug("Configure MailMessage using email message: {}", emailMessage);
         Context context = new Context(Locale.getDefault(), emailMessage.getProperties());
         String emailText = templateEngine.process(emailMessage.getTemplate(), context);
 

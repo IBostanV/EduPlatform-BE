@@ -1,16 +1,5 @@
 package com.play.quiz.service.impl;
 
-import static com.play.quiz.util.Constant.DEFAULT_EXPRESS_QUESTIONS_COUNT;
-import static com.play.quiz.util.Constant.DEFAULT_QUIZ_QUESTIONS_COUNT;
-import static com.play.quiz.util.Constant.EXPRESS;
-import static com.play.quiz.util.Constant.EXPRESS_QUIZ_DEFAULT_TIME_SECONDS;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import com.play.quiz.domain.Category;
 import com.play.quiz.domain.Property;
 import com.play.quiz.domain.Question;
@@ -29,9 +18,21 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static com.play.quiz.util.Constant.DEFAULT_EXPRESS_QUESTIONS_COUNT;
+import static com.play.quiz.util.Constant.DEFAULT_QUIZ_QUESTIONS_COUNT;
+import static com.play.quiz.util.Constant.EXPRESS_QUIZ_DEFAULT_TIME_SECONDS;
+
 @Service
 @RequiredArgsConstructor
 public class QuizServiceImpl implements QuizService {
+
+    private static final Long EXPRESS_CATEGORY_ID = 1L;
 
     private final QuizMapper quizMapper;
     private final QuizRepository quizRepository;
@@ -95,7 +96,7 @@ public class QuizServiceImpl implements QuizService {
     public QuizDto getExpressQuiz() {
         Property questionsCount = propertyRepository.findByName(DEFAULT_EXPRESS_QUESTIONS_COUNT);
         int quizTime = propertyRepository.findByName(EXPRESS_QUIZ_DEFAULT_TIME_SECONDS).getIntValue();
-        CategoryDto category = categoryService.getByNaturalId(EXPRESS);
+        CategoryDto category = categoryService.getById(EXPRESS_CATEGORY_ID, null);
         List<Question> questions = questionService.getGeneralKnowledgeQuestions(questionsCount.getIntValue());
 
         return createQuiz(quizTime, questionsCount.getIntValue(), category, questions);
@@ -105,7 +106,7 @@ public class QuizServiceImpl implements QuizService {
     public QuizDto getQuizByCategory(Long catId) {
         int questionsCount = propertyRepository.findByName(DEFAULT_QUIZ_QUESTIONS_COUNT).getIntValue();
         List<Question> questionList = questionService.getByCategoryId(catId, questionsCount);
-        CategoryDto categoryDto = categoryService.getById(catId);
+        CategoryDto categoryDto = categoryService.getById(catId, null);
 
         return createQuiz(0, questionsCount, categoryDto, questionList);
     }

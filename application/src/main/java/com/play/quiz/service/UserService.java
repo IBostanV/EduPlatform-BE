@@ -33,4 +33,8 @@ public interface UserService {
     Boolean changeLanguage(Language language);
 
     Set<UserRole> getUserRoles();
+
+    Set<Account> getUsersByUserGroupId(long userGroupId);
+
+    Set<AccountDto> getUserFriends(Long userId);
 }

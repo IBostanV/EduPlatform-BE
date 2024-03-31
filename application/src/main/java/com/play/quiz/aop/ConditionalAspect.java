@@ -28,7 +28,7 @@ public class ConditionalAspect {
 
         Conditional conditional = method.getAnnotation(Conditional.class);
         String property = environment.getProperty(conditional.property());
-        log.debug("Property: "+ conditional.property() +", value: "+ conditional.value() +", env value: "+ property);
+        log.debug("Property: {}, value: {}, env value: {}", conditional.property(), conditional.value(), property);
 
         if (conditional.matchIfMissing()) {
             if (Objects.isNull(property)) {
