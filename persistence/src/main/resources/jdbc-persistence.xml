@@ -187,6 +187,18 @@
         </constructor-arg>
     </bean>
 
+    <bean id="findUsersByIdsSql" class="java.lang.String">
+        <constructor-arg>
+            <value>
+                <![CDATA[
+                     SELECT u.*
+                     FROM Q_USER u
+                     WHERE u.account_id IN (:accountIds)
+                ]]>
+            </value>
+        </constructor-arg>
+    </bean>
+
     <bean id="findAllSql" class="java.lang.String">
         <constructor-arg>
             <value>

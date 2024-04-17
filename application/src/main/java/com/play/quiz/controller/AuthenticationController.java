@@ -40,17 +40,19 @@ public class AuthenticationController {
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AccountDto> login(@Valid @RequestBody final AccountDto accountDto) {
         AccountInfo accountInfo = authenticationService.login(accountDto);
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION, accountInfo.getJwtToken())
-                .body(accountInfo.getAccount());
+                .header(HttpHeaders.AUTHORIZATION, accountInfo.jwtToken())
+                .body(accountInfo.account());
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AccountDto> register(@Valid @RequestBody final AccountDto accountDto) {
         AccountInfo accountInfo = authenticationService.register(accountDto);
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .header(HttpHeaders.AUTHORIZATION, accountInfo.getJwtToken())
-                .body(accountInfo.getAccount());
+                .header(HttpHeaders.AUTHORIZATION, accountInfo.jwtToken())
+                .body(accountInfo.account());
     }
 
     @GetMapping(value = "/create-token", produces = MediaType.APPLICATION_JSON_VALUE)

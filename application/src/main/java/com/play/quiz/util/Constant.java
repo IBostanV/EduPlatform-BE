@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 public class Constant {
     public static final int SAVE_OPERATION_SUCCESSFULLY = 1;
 
-    public static final String EXPRESS = "EXPRESS";
     public static final String ENCRYPTION_SECRET_KEY = "ENCRYPTION_SECRET_KEY";
     public static final String ENCRYPTION_ALGORITHM = "ENCRYPTION_ALGORITHM";
     public static final String DEFAULT_EXPRESS_QUESTIONS_COUNT = "DEFAULT_EXPRESS_QUESTIONS_COUNT";

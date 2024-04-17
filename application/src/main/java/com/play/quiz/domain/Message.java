@@ -1,14 +1,13 @@
 package com.play.quiz.domain;
 
-import java.time.LocalDateTime;
-import java.util.Objects;
-
 import com.play.quiz.domain.helpers.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -17,6 +16,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
+
+import java.util.Objects;
 
 @Entity
 @Table(name = "Q_MESSAGE")
@@ -35,9 +36,10 @@ public class Message extends BaseEntity {
     private String content;
     private String sessionId;
     private byte[] attachment;
-    private String destination;
-    private LocalDateTime createdDate;
-    private LocalDateTime updatedDate;
+
+    @OneToOne(targetEntity = UserGroup.class)
+    @JoinColumn(name = "DESTINATION")
+    private UserGroup destination;
 
     @Override
     public final boolean equals(Object o) {

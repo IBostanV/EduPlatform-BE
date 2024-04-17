@@ -34,9 +34,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @NonNull
     @Override
-    public CategoryDto getById(final Long categoryId) {
+    public CategoryDto getById(final Long categoryId, final String naturalId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RecordNotFoundException("No records found by category id: " + categoryId));
+                .or(() -> categoryRepository.findByNaturalId(naturalId))
+                .orElseThrow(() -> new RecordNotFoundException(
+                        "No records found by category id: " + categoryId + " or natural id " + naturalId));
         return categoryMapper.toDto(category);
     }
 
@@ -54,17 +56,9 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryMapper.toShortDtoList(categories);
     }
 
-    @NonNull
-    @Override
-    public CategoryDto getByNaturalId(String naturalId) {
-        Category category = categoryRepository.findByNaturalId(naturalId)
-                .orElseThrow(() -> new RecordNotFoundException("No records found by natural Id: " + naturalId));
-        return categoryMapper.toDto(category);
-    }
-
     @Override
     public void deleteById(final Long categoryId) {
-        log.info("Deleting category with id: " + categoryId);
+        log.info("Deleting category with id: {}", categoryId);
         categoryRepository.deleteById(categoryId);
     }
 }

@@ -27,7 +27,7 @@ public class TranslationServiceImpl implements TranslationService {
     @Override
     @SuppressWarnings("unchecked")
     public Map<String, String> translate(String langCode) {
-        String queryString = "SELECT tran.*, tran.%s as value FROM Q_TRANSLATION tran ".formatted(langCode);
+        String queryString = "SELECT trsl.*, trsl.%s as value FROM Q_TRANSLATION trsl ".formatted(langCode);
 
         Query nativeQuery = entityManager.createNativeQuery(queryString, Translation.class);
         List<Translation> resultList = nativeQuery.getResultList();

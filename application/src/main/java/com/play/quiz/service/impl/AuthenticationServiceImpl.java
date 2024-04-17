@@ -32,7 +32,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AccountInfo register(final AccountDto accountDto) {
-        log.info("Register user with email: "+ accountDto.getEmail());
+        log.info("Register user with email: {}", accountDto.getEmail());
         SystemAssert.isAccountUnique(userService.userExists(accountDto), accountDto.getEmail());
         Account account = userService.save(assignRoles(accountDto));
         userService.sendAccountVerificationEmail(account);
@@ -53,7 +53,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AccountInfo login(final AccountDto accountDto) {
-        log.info("Login user with email: "+ accountDto.getEmail());
+        log.info("Login user with email: {}", accountDto.getEmail());
         Account account = userService.findByEmail(accountDto.getEmail());
         SystemAssert.isAccountEnabled(account.isEnabled(), account.getEmail());
         Authentication authentication = authenticate(accountDto);

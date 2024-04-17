@@ -58,5 +58,5 @@ VALUES(27, 'register', 'Sign up', NULL, 'ACTIVE', NULL, NULL, TIMESTAMP '2024-02
 
 -- //@UNDO
 -- SQL to undo the change goes here.
-DELETE FROM Q_TRANSLATION;
+DELETE FROM Q_TRANSLATION/execute/
 

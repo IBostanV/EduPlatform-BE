@@ -1,16 +1,10 @@
 package com.play.quiz.controller;
 
-import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_QUESTION;
-
-import java.util.List;
-
+import com.play.quiz.domain.Category;
 import com.play.quiz.dto.AnswerDto;
 import com.play.quiz.dto.QuestionDto;
 import com.play.quiz.enums.QuestionAttribute;
 import com.play.quiz.enums.QuestionType;
-import com.play.quiz.domain.Category;
-import com.play.quiz.domain.Language;
-import com.play.quiz.service.LanguageService;
 import com.play.quiz.service.QuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +17,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_QUESTION;
+
 @RestController
 @RequestMapping(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_QUESTION)
 @RequiredArgsConstructor
 public class QuestionController {
     private final QuestionService questionService;
-    private final LanguageService languageService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<QuestionDto> saveQuestion(@Valid @RequestBody final QuestionDto questionDto) {

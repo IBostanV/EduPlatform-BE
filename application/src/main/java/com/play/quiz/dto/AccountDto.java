@@ -45,8 +45,9 @@ public class AccountDto {
     private Long createdById;
     private String createdByName;
 
-    private Set<UserOccupationDto> occupations = Collections.emptySet();
     private Set<CategoryDto> favoriteCategories = Collections.emptySet();
+    private Set<AccountDto> friends = Collections.emptySet();
+    private Set<UserOccupationDto> occupations = Collections.emptySet();
 
     @NotBlank
     @Email(regexp = ".+@.+\\..+", message="Please provide a valid email address")

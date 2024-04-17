@@ -51,6 +51,7 @@ public class UserRepositoryImpl implements UserRepository {
     private final String findUserRolesSql;
     private final String findUserFavoriteCategoriesSql;
     private final String findUserOccupationsSql;
+    private final String findUsersByIdsSql;
     private final String deleteFavoriteCategoriesSql;
     private final String deleteUserOccupationsSql;
     private final String saveSql;
@@ -67,6 +68,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     public static final String EMAIL = "email";
     public static final String ACCOUNT_ID = "accountId";
+    public static final String ACCOUNT_IDS = "accountIds";
 
     @Override
     public Account save(final Account account) {
@@ -77,12 +79,12 @@ public class UserRepositoryImpl implements UserRepository {
 
     private Account handleInsert(final Account account) {
         final Long nextUserId = jdbcTemplate.queryForObject(userSequenceNextVal, Long.class);
-        log.info("Execute INSERT USER with id: " + nextUserId);
+        log.info("Execute INSERT USER with id: {}", nextUserId);
         return executeSave(nextUserId, account);
     }
 
     private Account handleUpdate(final Account account) {
-        log.info("Execute UPDATE USER with id: " + account.getAccountId());
+        log.info("Execute UPDATE USER with id: {}", account.getAccountId());
         return executeSave(account.getAccountId(), account);
     }
 
@@ -109,7 +111,7 @@ public class UserRepositoryImpl implements UserRepository {
                     account.getOccupations(), saveUserOccupationSql, accountId, "occupationId", occupationIdFunction));
         }
 
-        log.info("User with id: " + accountId + " successfully saved");
+        log.info("User with id: {} successfully saved", accountId);
         return account.toBuilder()
                 .accountId(accountId)
                 .build();
@@ -190,18 +192,18 @@ public class UserRepositoryImpl implements UserRepository {
         try {
             AccountRowMapper accountRowMapper = new AccountRowMapper();
             Account account = namedJdbcTemplate.queryForObject(findByEmailSql, Map.of(EMAIL, email), accountRowMapper);
-            log.info("Found user with email: " + email);
+            log.info("Found user with email: {}", email);
 
             return Optional.ofNullable(account);
         } catch (EmptyResultDataAccessException exception) {
-            log.info("No user found with email: " + email);
+            log.info("No user found with email: {}", email);
             return Optional.empty();
         }
     }
 
     private Account setAccountRoles(final Account account) {
         List<Role> roles = handleRoles(account);
-        log.info("Found roles: " + roles + " for user: " + account.getEmail());
+        log.info("Found roles: {} for user: {}", roles, account.getEmail());
         account.setRoles(roles);
         return account;
     }
@@ -371,5 +373,28 @@ public class UserRepositoryImpl implements UserRepository {
                 Map.of("langId", language.getLangId(),
                         "email", email));
         return Objects.equals(result, 1);
+    }
+
+    @Override
+    public Set<Account> findByUserIds(Set<Long> userIdList) {
+        MapSqlParameterSource parameterSource = new MapSqlParameterSource(ACCOUNT_IDS, userIdList);
+        List<Map<String, Object>> nameValueMapList = namedJdbcTemplate.queryForList(findUsersByIdsSql, parameterSource);
+
+        return getMappedUsersEntity(nameValueMapList);
+    }
+
+    private Set<Account> getMappedUsersEntity(List<Map<String, Object>> users) {
+        return users.stream()
+                .map(UserRepositoryImpl::mapUserFieldsToEntity)
+                .collect(Collectors.toSet());
+    }
+
+    private static Account mapUserFieldsToEntity(final Map<String, Object> userFieldsMap) {
+        return Account.builder()
+                .accountId(((BigDecimal) userFieldsMap.get("ACCOUNT_ID")).longValue())
+                .name(((String) userFieldsMap.get("NAME")))
+                .email((String) userFieldsMap.get("EMAIL"))
+                .username((String) userFieldsMap.get("USERNAME"))
+                .build();
     }
 }

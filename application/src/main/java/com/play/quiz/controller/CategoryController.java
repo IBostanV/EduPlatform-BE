@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Objects;
 
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
 
@@ -30,9 +29,7 @@ public class CategoryController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CategoryDto> getCategory(@RequestParam(required = false) Long id,
                                                    @RequestParam(required = false) String naturalId) {
-        return ResponseEntity.ok(Objects.nonNull(id)
-                ? categoryService.getById(id)
-                : categoryService.getByNaturalId(naturalId));
+        return ResponseEntity.ok(categoryService.getById(id, naturalId));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

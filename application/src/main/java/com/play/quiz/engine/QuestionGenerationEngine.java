@@ -27,7 +27,7 @@ public class QuestionGenerationEngine {
 
     @Transactional
     public List<Question> generateByAddedGlossary(final Glossary glossary) {
-        log.info("Generating questions for created glossary: [" + glossary.getTermId() + "," + glossary.getKey() + "]");
+        log.info("Generating questions for created glossary: [{},{}]", glossary.getTermId(), glossary.getKey());
         List<Question> templateQuestionList = questionRepository.findByTypeAndCategory(
                 QuestionType.TEMPLATE, glossary.getCategory());
 
@@ -38,7 +38,7 @@ public class QuestionGenerationEngine {
 
     @Transactional
     public List<Question> generateFromCreatedTemplate(final Question template) {
-        log.info("Generating questions from template: ["+ template.getQuestionId() + ","+ template.getCategory() +"]");
+        log.info("Generating questions from template: [{},{}]", template.getQuestionId(), template.getCategory());
         List<Glossary> categoryGlossaries = glossaryRepository.findAllByCategory(template.getCategory());
         return categoryGlossaries.stream().distinct()
                 .map(glossary -> createQuestion(template, glossary))

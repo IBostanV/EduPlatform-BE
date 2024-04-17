@@ -65,7 +65,7 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
     @Override
     @Transactional
     public UserQuizHistoryDto getById(final Long historyId) {
-        log.debug("Get UserHistory with historyId: " + historyId);
+        log.debug("Get UserHistory with historyId: {}", historyId);
         UserQuizHistoryDto historyDto = buildUserHistory(historyId);
         JsonArray jsonUserAnswers = JsonParser.parseString(historyDto.getAnswersJson()).getAsJsonArray();
 
@@ -100,7 +100,7 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
                     keyValue -> createHistoryAnswer(keyValue.getValue().getAsJsonObject(), question);
 
             if (questionIds.contains(question.getId().toString())) {
-                log.info("User answered the question: " + question.getId());
+                log.info("User answered the question: {}", question.getId());
                 return userAnswer.getAsJsonObject().entrySet()
                         .stream().map(createAnswer).toList();
             }
@@ -116,11 +116,11 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
         double time = getJsonElementValue(keyValue, "time").getAsDouble();
 
         if (Objects.equals(answer.getTermId(), glossaryId)) {
-            log.debug("User answered right. Glossary id: " + glossaryId);
+            log.debug("User answered right. Glossary id: {}", glossaryId);
             return new HistoryAnswer(time, question.getContent(), answer.getContent(), null);
         }
 
-        log.debug("User answered wrong. Get user answer by glossary id: " + glossaryId);
+        log.debug("User answered wrong. Get user answer by glossary id: {}", glossaryId);
         GlossaryDto glossaryDto = glossaryService.getById(glossaryId);
         return new HistoryAnswer(time, question.getContent(), glossaryDto.getValue(), answer.getContent());
     }
