@@ -3,9 +3,7 @@ package com.play.quiz.dto;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
-import com.play.quiz.domain.Trophy;
 import com.play.quiz.dto.wrapper.HistoryAnswer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +20,6 @@ public class UserQuizHistoryDto {
     private Double spentTime;
     private String answersJson;
     private AccountDto account;
-    private Set<Trophy> trophies;
     private LocalDateTime completedDate;
 
     @Builder.Default

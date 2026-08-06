@@ -14,8 +14,9 @@ import org.junit.jupiter.api.Test;
 class AccountTest {
     private static final String GETTER = "get";
     private static final String SETTER = "set";
+    // A boolean already named "isX" is read as isX(), never getIsX().
     private static final List<String> GETTERS_TO_SKIP = List.of(
-            "isEnabled");
+            "isEnabled", "isBlocked");
 
     @Test
     void given_account_then_all_fields_have_setters_getters() {

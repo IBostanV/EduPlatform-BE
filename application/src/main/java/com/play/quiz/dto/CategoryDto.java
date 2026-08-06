@@ -21,6 +21,8 @@ public class CategoryDto {
    private Boolean visible;
    private String naturalId;
    private byte[] attachment;
+   // Whether there is a picture to ask /{catId}/image for; the short list sends this instead of it.
+   private Boolean hasImage;
    private String parentName;
    private List<CategoryTranslationDto> categoryTranslations;
 

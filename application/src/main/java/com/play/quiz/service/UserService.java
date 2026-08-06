@@ -4,6 +4,9 @@ import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
 import com.play.quiz.dto.AccountDto;
 import com.play.quiz.enums.UserRole;
+import com.play.quiz.record.ManagedAccount;
+import com.play.quiz.record.ManagedAccountInput;
+import com.play.quiz.record.UserSummary;
 import com.play.quiz.record.PasswordInput;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,7 +21,7 @@ public interface UserService {
 
     Account findByEmail(String email);
 
-    List<AccountDto> getAccountList();
+    List<UserSummary> getAccountList();
 
     boolean userExists(AccountDto accountDto);
 
@@ -36,5 +39,34 @@ public interface UserService {
 
     Set<Account> getUsersByUserGroupId(long userGroupId);
 
-    Set<AccountDto> getUserFriends(Long userId);
+    List<UserSummary> getCurrentUserFriends();
+
+    void addFriend(Long friendId);
+
+    void removeFriend(Long friendId);
+
+    /** Adds to what an account has collected, which is what its level is worked out from. */
+    void addExperience(Long accountId, int amount);
+
+    /**
+     * Marks today as visited and keeps the run of consecutive days, paying for the first visit of
+     * each day. Called wherever the signed-in player is read, so simply turning up counts.
+     */
+    Account recordVisit(String email);
+
+    // Admin-only account management. Everything below is reachable from /api/user/admin, which
+    // WebSecurity keeps to ROLE_ADMIN.
+
+    List<ManagedAccount> getManagedAccounts();
+
+    ManagedAccount createAccount(ManagedAccountInput input);
+
+    ManagedAccount updateAccount(Long accountId, ManagedAccountInput input);
+
+    ManagedAccount setAccountBlocked(Long accountId, boolean blocked);
+
+    void deleteAccount(Long accountId);
+
+    /** The account with this id, occupations and favourite categories loaded, for its profile page. */
+    Account getProfileAccount(Long accountId);
 }

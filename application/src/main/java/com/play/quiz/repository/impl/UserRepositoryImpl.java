@@ -152,7 +152,6 @@ public class UserRepositoryImpl implements UserRepository {
         propertyMap.put("avatar", account.getAvatar());
         propertyMap.put("isEnabled", account.isEnabled());
         propertyMap.put("name", mapNull().apply(account.getName()));
-        propertyMap.put("theme", mapNull().apply(account.getTheme()));
         propertyMap.put("surname", mapNull().apply(account.getSurname()));
         propertyMap.put("birthday", mapNull().apply(account.getBirthday()));
         propertyMap.put("username", mapNull().apply(account.getUsername()));

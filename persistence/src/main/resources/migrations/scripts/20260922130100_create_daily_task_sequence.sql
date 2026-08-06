@@ -1,0 +1,7 @@
+-- // create_daily_task_sequence
+CREATE SEQUENCE DAILY_TASK_SEQ START WITH 1 INCREMENT BY 1 NOCACHE
+/execute/
+
+-- //@UNDO
+DROP SEQUENCE DAILY_TASK_SEQ
+/execute/

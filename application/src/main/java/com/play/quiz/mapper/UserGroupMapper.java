@@ -12,6 +12,8 @@ public interface UserGroupMapper {
 
     @Mapping(target = "participantId", source = "participant.accountId")
     @Mapping(target = "participantUsername", source = "participant.username")
+    @Mapping(target = "name", source = "messageGroup.name")
+    @Mapping(target = "photo", source = "messageGroup.photo")
     UserGroupDto toDto(UserGroup userGroup);
 
     @Mapping(target = "participant.accountId", source = "participantId")

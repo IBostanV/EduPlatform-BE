@@ -1,11 +1,4 @@
 -- // create_message_constraints
-ALTER TABLE Q_MESSAGE
-    ADD CONSTRAINT MESSAGE_USER_GROUP_FK
-        FOREIGN KEY (DESTINATION)
-            REFERENCES Q_USER_GROUP(ID)
-/execute/
+-- MESSAGE_MESSAGE_GROUP_FK lives in 20260919014410_create_message_group_table: Q_MESSAGE_GROUP does not exist yet here.
 
 -- //@UNDO
--- SQL to undo the change goes here.
-ALTER TABLE Q_MESSAGE DROP CONSTRAINT MESSAGE_USER_GROUP_FK
-/execute/

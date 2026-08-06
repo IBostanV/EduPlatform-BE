@@ -56,6 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         log.info("Login user with email: {}", accountDto.getEmail());
         Account account = userService.findByEmail(accountDto.getEmail());
         SystemAssert.isAccountEnabled(account.isEnabled(), account.getEmail());
+        SystemAssert.isAccountNotBlocked(account.isBlocked(), account.getEmail());
         Authentication authentication = authenticate(accountDto);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);

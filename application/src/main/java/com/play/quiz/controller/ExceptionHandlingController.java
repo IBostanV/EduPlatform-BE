@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionHandlingController {
 
     @ExceptionHandler({UserNotFoundException.class, UsernameNotFoundException.class})
-    public ResponseEntity<String> userNotFound(final UserNotFoundException exception) {
+    public ResponseEntity<String> userNotFound(final RuntimeException exception) {
         log.info(exception.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
@@ -39,7 +39,7 @@ public class ExceptionHandlingController {
 
     @ExceptionHandler(IOException.class)
     public ResponseEntity<String> inputOutputException(final IOException exception) {
-        log.info(exception.getMessage());
+        log.error(exception.getMessage(), exception);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(exception.getMessage());
@@ -63,7 +63,9 @@ public class ExceptionHandlingController {
 
     @ExceptionHandler({EmailSendFailedException.class, RuntimeException.class})
     public ResponseEntity<String> runtimeException(final RuntimeException exception) {
-        log.info(exception.getMessage());
+        // The class name too: a wrapped persistence error carries a message that says nothing
+        // about what threw it.
+        log.error("Unhandled {}: {}", exception.getClass().getName(), exception.getMessage(), exception);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(exception.getMessage());
@@ -71,8 +73,10 @@ public class ExceptionHandlingController {
 
     @ExceptionHandler({MethodArgumentNotValidException.class})
     public ResponseEntity<List<String>> handleMethodArgumentNotValidException(final MethodArgumentNotValidException exception) {
-        final List<FieldError> fieldErrors = exception.getBindingResult().getFieldErrors();
-        return ResponseEntity.badRequest().body(getViolatedFields(fieldErrors));
+        final List<String> violatedFields = getViolatedFields(exception.getBindingResult().getFieldErrors());
+        log.info("Validation failed: {}", violatedFields);
+        return ResponseEntity.badRequest()
+                .body(violatedFields);
     }
 
     private static List<String> getViolatedFields(List<FieldError> fieldErrors) {

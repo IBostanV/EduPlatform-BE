@@ -37,9 +37,9 @@ public class Message extends BaseEntity {
     private String sessionId;
     private byte[] attachment;
 
-    @OneToOne(targetEntity = UserGroup.class)
+    @OneToOne(targetEntity = MessageGroup.class)
     @JoinColumn(name = "DESTINATION")
-    private UserGroup destination;
+    private MessageGroup destination;
 
     @Override
     public final boolean equals(Object o) {

@@ -10,14 +10,14 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface MessageMapper {
 
-    @Mapping(target = "participantId", source = "destination.participant.accountId")
-    @Mapping(target = "participantUsername", source = "destination.participant.username")
-    @Mapping(target = "destinationId", source = "destination.id")
+    @Mapping(target = "participantId", ignore = true)
+    @Mapping(target = "participantUsername", ignore = true)
+    @Mapping(target = "destinationId", source = "destination.groupId")
+    @Mapping(target = "edited", expression = "java(message.getUpdatedDate() != null)")
+    @Mapping(target = "event", ignore = true)
     MessageDto toDto(Message message);
 
-    @Mapping(target = "destination.participant.accountId", source = "participantId")
-    @Mapping(target = "destination.participant.username", source = "participantUsername")
-    @Mapping(target = "destination.id", source = "destinationId")
+    @Mapping(target = "destination.groupId", source = "destinationId")
     Message toEntity(MessageDto messageDto);
 
     List<MessageDto> toDtoList(List<Message> messages);

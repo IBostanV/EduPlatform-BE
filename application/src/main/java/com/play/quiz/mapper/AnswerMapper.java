@@ -14,6 +14,11 @@ public abstract class AnswerMapper {
     public abstract Answer toEntity(final AnswerDto answerDto);
 
     @Mapping(target = "id", source = "ansId")
+    @Mapping(target = "termId", source = "glossary.termId")
+    @Mapping(target = "glossaryAttachment", source = "glossary.attachment")
+    @Mapping(target = "glossaryKey", source = "glossary.key")
+    @Mapping(target = "glossaryOptions", source = "glossary.options")
+    @Mapping(target = "mapLevel", source = "glossary.type.options")
     public abstract AnswerDto toDto(final Answer answer);
 
     public abstract List<AnswerDto> toDtoList(final List<Answer> answerList);

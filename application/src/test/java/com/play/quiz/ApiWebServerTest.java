@@ -12,5 +12,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 class ApiWebServerTest {
 
     @Test
-    void contextLoads() {}
+    void contextLoads() {
+        System.out.println("Test");
+    }
 }

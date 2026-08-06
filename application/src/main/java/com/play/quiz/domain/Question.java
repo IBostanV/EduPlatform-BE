@@ -41,6 +41,8 @@ public class Question extends BaseEntity {
 
     private String topic;
     private int priority;
+    private String content;
+    private Long excludeType;
 
     @OneToOne(targetEntity = Category.class)
     @JoinColumn(name = "CAT_ID")
@@ -51,8 +53,6 @@ public class Question extends BaseEntity {
 
     @Column(name = "COMPLEXITY_LEVEL")
     private int complexityLevel;
-
-    private String content;
 
     @Convert(converter = AttributeListConverter.class)
     private List<QuestionAttribute> attributes;
@@ -73,8 +73,9 @@ public class Question extends BaseEntity {
     }
 
     public Question copy(final QuestionType questionType, String content, final List<QuestionAttribute> attributes) {
-        return new Question(null, this.account, questionType, this.tipId, this.topic, this.priority, this.category, this.isActive,
-                this.complexityLevel, content, attributes, this.answers, this.translations);
+        return new Question(null, this.account, questionType, this.tipId, this.topic, this.priority, content,
+                this.excludeType, this.category, this.isActive, this.complexityLevel, attributes, this.answers,
+                this.translations);
     }
 
     public void fillTranslationsParent() {

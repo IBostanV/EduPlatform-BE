@@ -2,7 +2,7 @@
 <Configuration status="DEBUG" monitorInterval="1000">
 
     <Properties>
-        <Property name="LOG1">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} [%-6p] %c:%L - %m%n</Property>
+        <Property name="LOG1">%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} [%-6p] [%t] [%X{requestId}] [%X{user}] %c:%L - %m%n%xEx{full}</Property>
     </Properties>
 
     <Appenders>
@@ -27,6 +27,19 @@
 
     <Loggers>
         <Logger name="org.springframework" level="DEBUG" additivity="false">
+            <AppenderRef ref="SOUT"/>
+            <AppenderRef ref="RollingFileAppender"/>
+        </Logger>
+
+        <!-- Http403ForbiddenEntryPoint logs the rejection without the cause; ExceptionTranslationFilter
+             at TRACE logs the AccessDeniedException itself, so %xEx{full} prints the denied method. -->
+        <Logger name="org.springframework.security.web.access.ExceptionTranslationFilter" level="TRACE" additivity="false">
+            <AppenderRef ref="SOUT"/>
+            <AppenderRef ref="RollingFileAppender"/>
+        </Logger>
+
+        <!-- PQ_LOG_APP=DEBUG to follow a request through the services. -->
+        <Logger name="com.play.quiz" level="${env:PQ_LOG_APP:-INFO}" additivity="false">
             <AppenderRef ref="SOUT"/>
             <AppenderRef ref="RollingFileAppender"/>
         </Logger>

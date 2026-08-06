@@ -17,4 +17,5 @@ public class UserGroupDto {
     private boolean muted;
     private Long participantId;
     private String participantUsername;
+    private byte[] photo;
 }

@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.play.quiz.domain.Language;
+import com.play.quiz.record.PlayerLevel;
+import com.play.quiz.trophy.TrophyCatalog;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -31,12 +33,16 @@ import java.util.Set;
 public class AccountDto {
     private Long id;
     private String name;
-    private String theme;
     private byte[] avatar;
     private String surname;
     private String username;
     private boolean isEnabled;
     private Integer experience;
+    private int loginStreak;
+    private int bestStreak;
+    private String preferredTrophy;
+    /** The chosen trophy as it is drawn, so the bar needs no second request to show it. */
+    private TrophyCatalog.TrophyFace trophy;
     private Language language;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
@@ -63,4 +69,14 @@ public class AccountDto {
 
     @Builder.Default
     private List<RoleDto> roles = Collections.emptyList();
+
+    /**
+     * What the experience above adds up to, so the browser draws the bar instead of working the
+     * formula out a second time. Read-only: it is derived, and the profile form posts this same
+     * shape back, which must not be a way to hand yourself a level.
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public PlayerLevel getPlayerLevel() {
+        return PlayerLevel.of(experience);
+    }
 }

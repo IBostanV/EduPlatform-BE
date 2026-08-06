@@ -21,6 +21,7 @@ public abstract class CategoryMapper {
     @Mapping(target = "parentId", source = "parent.catId")
     @Mapping(target = "parentName", source = "parent.name")
     @Mapping(target = "naturalId", source = "name", qualifiedByName = "upperCase")
+    @Mapping(target = "hasImage", expression = "java(category.getAttachment() != null)")
     public abstract CategoryDto toDto(final Category category);
 
     public abstract List<CategoryDto> toDtoList(final List<Category> categories);
@@ -60,5 +61,6 @@ public abstract class CategoryMapper {
     @Mapping(target = "attachment", ignore = true)
     @Mapping(target = "parentName", ignore = true)
     @Mapping(target = "categoryTranslations", ignore = true)
+    @Mapping(target = "hasImage", expression = "java(question.getAttachment() != null)")
     protected abstract CategoryDto shortInfo(Category question);
 }

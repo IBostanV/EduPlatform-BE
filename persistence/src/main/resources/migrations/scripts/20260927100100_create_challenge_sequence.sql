@@ -1,0 +1,7 @@
+-- // create_challenge_sequence
+CREATE SEQUENCE CHALLENGE_SEQ START WITH 1 INCREMENT BY 1 NOCACHE
+/execute/
+
+-- //@UNDO
+DROP SEQUENCE CHALLENGE_SEQ
+/execute/

@@ -18,6 +18,8 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring")
 public interface QuizMapper {
 
+    // `custom` is the server's to set (CustomQuizServiceImpl.create), never the client's.
+    @Mapping(target = "custom", ignore = true)
     Quiz toEntity(final QuizDto quizDto);
 
     @IterableMapping(qualifiedByName = "handlingQuestions")
@@ -31,7 +33,7 @@ public interface QuizMapper {
 
     QuestionTranslationDto withQuestionTranslationDto(final QuestionTranslation questionTranslation);
 
-    @Mapping(target = "quizType", ignore = true)
+    @Mapping(target = "quizType", source = "type")
     @Mapping(target = "category.parentId", source = "category.parent.catId")
     @Mapping(target = "category.parentName", source = "category.parent.name")
     QuizDto toDto(final Quiz quiz);
@@ -43,5 +45,8 @@ public interface QuizMapper {
     @Mapping(target = "answerTranslations", ignore = true)
     @Mapping(target = "termId", source = "glossary.termId")
     @Mapping(target = "glossaryAttachment", source = "glossary.attachment")
+    @Mapping(target = "glossaryKey", source = "glossary.key")
+    @Mapping(target = "glossaryOptions", source = "glossary.options")
+    @Mapping(target = "mapLevel", source = "glossary.type.options")
     AnswerDto toAnswerDto(final Answer answer);
 }

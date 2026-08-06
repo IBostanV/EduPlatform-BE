@@ -2,7 +2,6 @@ package com.play.quiz.domain;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
-import java.util.Set;
 
 import com.play.quiz.domain.helpers.BaseEntity;
 import jakarta.persistence.CascadeType;
@@ -12,9 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
@@ -22,6 +19,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.Hibernate;
@@ -57,12 +55,15 @@ public class UserQuizHistory extends BaseEntity {
     @Column(name = "SPENT_TIME")
     private Double spentTime;
 
-    @ManyToMany
-    @JoinTable(name = "Q_HISTORY_TROPHY",
-            joinColumns = @JoinColumn(name = "HISTORY_ID"),
-            inverseJoinColumns = @JoinColumn(name = "TROPHY_ID"))
-    @ToString.Exclude
-    private Set<Trophy> trophies;
+    // The score, marked once when the run is recorded. Null on runs taken before it was kept,
+    // which the profile shows as a dash rather than as nought out of nought.
+    @Setter
+    @Column(name = "RIGHT_ANSWERS")
+    private Integer rightAnswers;
+
+    @Setter
+    @Column(name = "TOTAL_ANSWERS")
+    private Integer totalAnswers;
 
     @Override
     public boolean equals(Object o) {

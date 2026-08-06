@@ -18,4 +18,10 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Query("SELECT cat FROM Category cat WHERE cat.visible = TRUE")
     List<Category> findAllActive(Sort sort);
+
+    // The conquest game's countries: the visible children of the category the parent names, each
+    // standing for one country and named on the map by its natural id (the ISO3 code, "MDA").
+    @Query("SELECT cat FROM Category cat WHERE cat.visible = TRUE AND cat.parent.naturalId = :parentNaturalId"
+            + " AND LENGTH(cat.naturalId) = 3 ORDER BY cat.naturalId")
+    List<Category> findCountries(String parentNaturalId);
 }

@@ -38,6 +38,9 @@ public class PQUserDetailsServiceImpl implements PQUserDetailsService {
                 .username(account.getEmail())
                 .password(String.copyValueOf(account.getPassword()))
                 .authorities(getUserAuthorities(account))
+                // A blocked account is refused at login, and the token filter drops the tokens
+                // already out there rather than waiting for each to expire.
+                .disabled(account.isBlocked())
                 .build();
     }
 

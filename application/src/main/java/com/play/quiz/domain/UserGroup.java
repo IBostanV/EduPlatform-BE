@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
@@ -31,9 +32,13 @@ public class UserGroup extends BaseEntity {
     private Long id;
     @Column(name = "GROUP_ID")
     private Long groupId;
-    private String name;
     private String theme;
     private boolean muted;
+
+    @ToString.Exclude
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "GROUP_ID", insertable = false, updatable = false)
+    private MessageGroup messageGroup;
 
     @OneToOne(targetEntity = Account.class, fetch = FetchType.LAZY)
     @JoinColumn(name = "PARTICIPANT")

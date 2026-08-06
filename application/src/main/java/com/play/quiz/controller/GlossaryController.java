@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,5 +66,31 @@ public class GlossaryController {
     @GetMapping(value = "/types", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<GlossaryTypeDto>> getGlossaryTypes() {
         return ResponseEntity.ok(glossaryService.getGlossaryTypes());
+    }
+
+    // The badge on the content dashboard's Glossaries entry: terms still without a type. Their
+    // questions have nothing plausible to draw wrong options from, so they go out short.
+    @GetMapping(value = "/missing-type-count", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> countMissingType() {
+        return ResponseEntity.ok(glossaryService.countWithoutType());
+    }
+
+    @PutMapping(value = "/types/{typeId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GlossaryType> updateGlossaryType(@PathVariable final Long typeId, @RequestBody final GlossaryType changes) {
+        return ResponseEntity.ok(glossaryService.updateGlossaryType(typeId, changes));
+    }
+
+    // 400 with a readable reason while glossaries still use the type.
+    @DeleteMapping("/types/{typeId}")
+    public ResponseEntity<Void> deleteGlossaryType(@PathVariable final Long typeId) {
+        glossaryService.deleteGlossaryType(typeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 400 with a readable reason while questions or child glossaries still use the term.
+    @DeleteMapping("/{glossaryId}")
+    public ResponseEntity<Void> deleteGlossary(@PathVariable final Long glossaryId) {
+        glossaryService.deleteGlossary(glossaryId);
+        return ResponseEntity.noContent().build();
     }
 }
