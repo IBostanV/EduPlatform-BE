@@ -1,16 +1,12 @@
 package com.play.quiz.domain;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
 import com.play.quiz.converter.QuestionIdsConverter;
 import com.play.quiz.domain.helpers.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,6 +21,12 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.Hibernate;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "Q_QUIZ")
@@ -43,6 +45,10 @@ public class Quiz extends BaseEntity {
     @JoinColumn(name = "CAT_ID")
     private Category category;
 
+    @OneToOne(targetEntity = QuizType.class)
+    @JoinColumn(name = "TYPE")
+    private QuizType type;
+
     @Column(name = "QUESTION_IDS")
     @Convert(converter = QuestionIdsConverter.class)
     private Set<Long> questionIds;
@@ -55,6 +61,15 @@ public class Quiz extends BaseEntity {
 
     @Column(name = "QUESTIONS_COUNT")
     private int questionsCount;
+
+    // True for a quiz a player built from questions they wrote (Q_CUSTOM_QUESTION); false for one
+    // made from the admins' or the system's questions (Q_QUESTION).
+    @Column(name = "IS_CUSTOM")
+    private boolean custom;
+
+    // Seconds allowed per question. Null on the quizzes that time the whole run instead.
+    @Column(name = "QUESTION_TIME")
+    private Integer questionTime;
 
     @Transient
     private List<Question> questionList = new ArrayList<>(questionsCount);

@@ -8,6 +8,7 @@ import com.play.quiz.exception.EntityNotUpdatedException;
 import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.mapper.GlossaryMapper;
 import com.play.quiz.mapper.GlossaryTypeMapper;
+import com.play.quiz.repository.AnswerRepository;
 import com.play.quiz.repository.GlossaryRepository;
 import com.play.quiz.repository.GlossaryTypeRepository;
 import com.play.quiz.service.GlossaryService;
@@ -30,6 +31,7 @@ public class GlossaryServiceImpl implements GlossaryService {
     private final GlossaryRepository glossaryRepository;
     private final GlossaryTypeMapper glossaryTypeMapper;
     private final GlossaryTypeRepository glossaryTypeRepository;
+    private final AnswerRepository answerRepository;
 
     @Transactional
     public GlossaryDto save(final GlossaryDto glossaryDto, final MultipartFile attachment) {
@@ -87,10 +89,60 @@ public class GlossaryServiceImpl implements GlossaryService {
         return glossaryTypeRepository.save(glossaryType);
     }
 
+    // Loads and copies the stored type, so its created date and anything else not edited stay.
+    @Override
+    @Transactional
+    public GlossaryType updateGlossaryType(final Long typeId, final GlossaryType changes) {
+        GlossaryType type = glossaryTypeRepository.findById(typeId)
+                .orElseThrow(() -> new RecordNotFoundException("No glossary type with id: " + typeId));
+        return glossaryTypeRepository.save(type.toBuilder()
+                .name(changes.getName())
+                .options(changes.getOptions())
+                .isActive(changes.getIsActive())
+                .build());
+    }
+
+    // Refused while glossaries use it, with a message the admin can act on, rather than the
+    // database's foreign-key error.
+    @Override
+    @Transactional
+    public void deleteGlossaryType(final Long typeId) {
+        long usedBy = glossaryTypeRepository.countGlossariesUsing(typeId);
+        if (usedBy > 0) {
+            throw new IllegalArgumentException("This type is used by " + usedBy
+                    + " glossar" + (usedBy == 1 ? "y" : "ies") + ". Change their type first.");
+        }
+        glossaryTypeRepository.deleteById(typeId);
+    }
+
+    // Same idea: questions answered by this term, or terms nested under it, keep it in place.
+    // Its translations go with it (cascade).
+    @Override
+    @Transactional
+    public void deleteGlossary(final Long glossaryId) {
+        long answers = answerRepository.countUsingGlossary(glossaryId);
+        if (answers > 0) {
+            throw new IllegalArgumentException("This glossary is the answer to " + answers
+                    + " question" + (answers == 1 ? "" : "s") + ". Delete or change those questions first.");
+        }
+        long children = glossaryRepository.countChildren(glossaryId);
+        if (children > 0) {
+            throw new IllegalArgumentException("This glossary is the parent of " + children
+                    + " other glossar" + (children == 1 ? "y" : "ies") + ". Move or delete them first.");
+        }
+        glossaryRepository.deleteById(glossaryId);
+    }
+
     @Override
     public List<GlossaryTypeDto> getGlossaryTypes() {
         List<GlossaryType> glossaryTypeList = glossaryTypeRepository.findAll();
         return glossaryTypeMapper.toDtoList(glossaryTypeList);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countWithoutType() {
+        return glossaryRepository.countByTypeIsNull();
     }
 
     @Override

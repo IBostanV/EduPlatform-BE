@@ -1,0 +1,7 @@
+-- // create_conquest_attempt_sequence
+CREATE SEQUENCE CONQUEST_ATTEMPT_SEQ START WITH 1 INCREMENT BY 1 NOCACHE
+/execute/
+
+-- //@UNDO
+DROP SEQUENCE CONQUEST_ATTEMPT_SEQ
+/execute/

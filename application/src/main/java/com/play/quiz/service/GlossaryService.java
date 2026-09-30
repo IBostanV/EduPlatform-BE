@@ -22,7 +22,16 @@ public interface GlossaryService {
 
     GlossaryType saveGlossaryType(final GlossaryType glossaryType);
 
+    GlossaryType updateGlossaryType(final Long typeId, final GlossaryType changes);
+
+    void deleteGlossaryType(final Long typeId);
+
+    void deleteGlossary(final Long glossaryId);
+
     List<GlossaryTypeDto> getGlossaryTypes();
+
+    /** How many terms have no type, which is a gap the content dashboard shows as a badge. */
+    long countWithoutType();
 
     Glossary getEntityById(final Long glossaryId);
 }

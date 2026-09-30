@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static com.play.quiz.controller.RestEndpoint.WS_BROKER_PARTY;
+import static com.play.quiz.controller.RestEndpoint.WS_BROKER_LIVE;
 import static com.play.quiz.controller.RestEndpoint.WS_BROKER_SOLO;
 
 @Configuration
@@ -37,7 +38,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(final MessageBrokerRegistry messageBrokerRegistry) {
         messageBrokerRegistry.setApplicationDestinationPrefixes(RestEndpoint.CONTEXT_PATH + "/app");
-        messageBrokerRegistry.enableSimpleBroker(WS_BROKER_PARTY, WS_BROKER_SOLO);
+        messageBrokerRegistry.enableSimpleBroker(WS_BROKER_PARTY, WS_BROKER_SOLO, WS_BROKER_LIVE);
     }
 
     @Override

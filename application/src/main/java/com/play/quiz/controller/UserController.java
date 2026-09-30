@@ -6,21 +6,30 @@ import com.play.quiz.dto.AccountDto;
 import com.play.quiz.dto.UserGroupDto;
 import com.play.quiz.dto.UserOccupationDto;
 import com.play.quiz.enums.UserRole;
+import com.play.quiz.iq.IqService;
 import com.play.quiz.mapper.AccountMapper;
+import com.play.quiz.record.CreateGroupInput;
+import com.play.quiz.record.UserSummary;
+import com.play.quiz.record.MuteInput;
 import com.play.quiz.record.PasswordInput;
+import com.play.quiz.record.PublicProfile;
 import com.play.quiz.service.UserGroupService;
 import com.play.quiz.service.UserOccupationService;
 import com.play.quiz.service.UserService;
+import com.play.quiz.trophy.TrophyCatalog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
@@ -37,15 +46,31 @@ public class UserController {
     private final UserService userService;
     private final UserGroupService userGroupService;
     private final UserOccupationService userOccupationService;
+    private final TrophyCatalog trophyCatalog;
+    private final IqService iqService;
 
+    // Reading the signed-in player is also what marks the day as visited: it is asked for on
+    // every page, which is what "visited today" means.
     @GetMapping(value = "/get-current-user", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AccountDto> getUser(Principal principal) {
-        Account account = userService.findByEmail(principal.getName());
-        return ResponseEntity.ok(accountMapper.toDto(account));
+        Account account = userService.recordVisit(principal.getName());
+        AccountDto dto = accountMapper.toDto(account);
+        dto.setTrophy(trophyCatalog.faceOf(account.getPreferredTrophy()).orElse(null));
+
+        return ResponseEntity.ok(dto);
+    }
+
+    // Another player's profile, read-only; PublicProfile is what it holds and what it leaves out.
+    @GetMapping(value = "/{accountId}/profile", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PublicProfile> getProfile(@PathVariable final Long accountId) {
+        Account account = userService.getProfileAccount(accountId);
+        return ResponseEntity.ok(PublicProfile.of(account,
+                trophyCatalog.faceOf(account.getPreferredTrophy()).orElse(null),
+                iqService.latest(accountId).orElse(null)));
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<AccountDto>> getAccountList() {
+    public ResponseEntity<List<UserSummary>> getAccountList() {
         return ResponseEntity.ok(userService.getAccountList());
     }
 
@@ -64,9 +89,56 @@ public class UserController {
         return ResponseEntity.ok(userGroupService.getCurrentUserGroups());
     }
 
-    @GetMapping(value = "/friends/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Set<AccountDto>> getUserFriends(@PathVariable Long userId) {
-        return ResponseEntity.ok(userService.getUserFriends(userId));
+    // Returns the new group's id, so the client can open /chat/{groupId} straight away.
+    @PostMapping(value = "/groups", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> createGroup(@RequestBody CreateGroupInput input) {
+        return ResponseEntity.ok(userGroupService.createGroup(input.name(), input.participantIds()));
+    }
+
+    // Ids of the groups the signed-in user has muted.
+    @GetMapping(value = "/groups/muted", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Set<Long>> getMutedGroups() {
+        return ResponseEntity.ok(userGroupService.getMutedGroupIds());
+    }
+
+    // The group's picture, for every member to see; sending no file clears it.
+    @PutMapping(value = "/groups/{groupId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> setGroupPhoto(@PathVariable Long groupId,
+                                              @RequestPart(required = false) final MultipartFile photo) {
+        userGroupService.setPhoto(groupId, photo);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Mute or unmute one group for the signed-in user; other members are unaffected.
+    @PutMapping("/groups/{groupId}/mute")
+    public ResponseEntity<Void> setGroupMuted(@PathVariable Long groupId, @RequestBody MuteInput input) {
+        userGroupService.setMuted(groupId, input.muted());
+        return ResponseEntity.noContent().build();
+    }
+
+    // Deletes the group and its messages for every member; only a member may do it.
+    @DeleteMapping("/groups/{groupId}")
+    public ResponseEntity<Void> deleteGroup(@PathVariable Long groupId) {
+        userGroupService.deleteGroup(groupId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // The signed-in user's friends; no user id in the path, so nobody can list someone else's.
+    @GetMapping(value = "/friends", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<UserSummary>> getFriends() {
+        return ResponseEntity.ok(userService.getCurrentUserFriends());
+    }
+
+    @PostMapping("/friends/{friendId}")
+    public ResponseEntity<Void> addFriend(@PathVariable Long friendId) {
+        userService.addFriend(friendId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/friends/{friendId}")
+    public ResponseEntity<Void> removeFriend(@PathVariable Long friendId) {
+        userService.removeFriend(friendId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

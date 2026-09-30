@@ -1,6 +1,7 @@
 package com.play.quiz.domain;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +43,6 @@ public class Account extends BaseEntity {
     private Long accountId;
     private String name;
     private String email;
-    private String theme;
     @ToString.Exclude
     private byte[] avatar;
     private String surname;
@@ -56,12 +56,44 @@ public class Account extends BaseEntity {
     @JoinColumn(name = "LANG_ID")
     private Language language;
 
-    @OneToOne(targetEntity = Trophy.class)
-    @JoinColumn(name = "TROPHY_ID")
-    private Trophy mainTrophy;
+    /** The trophy this player has chosen to show beside their name; a trophy code, or null. */
+    @Column(name = "PREFERRED_TROPHY")
+    private String preferredTrophy;
+
+    // Visiting on consecutive days is worth experience and a trophy, so the run is kept here
+    // rather than worked out from a log: one date and two counters answer it in a read.
+    @Column(name = "LAST_SEEN_DATE")
+    private LocalDate lastSeenDate;
+
+    @Column(name = "LOGIN_STREAK")
+    private int loginStreak;
+
+    @Column(name = "BEST_STREAK")
+    private int bestStreak;
+
+    /** Notifications from after this moment are unread; null means none has been read yet. */
+    @Column(name = "NOTIFICATIONS_READ_AT")
+    private LocalDateTime notificationsReadAt;
+
+    /** News kinds the player switched off, comma-separated FeedItem.Type names; null for none. */
+    @Column(name = "HIDDEN_NEWS")
+    private String hiddenNews;
+
+    /** The player's own look of the site, as JSON (appearance.Appearance); null for the site as it comes. */
+    @Column(name = "APPEARANCE")
+    private String appearance;
+
+    /** The chat group this player plays Conquest for; null for playing on their own. */
+    @Column(name = "CONQUEST_TEAM")
+    private Long conquestTeam;
 
     @Column(name = "IS_ENABLED")
     private boolean isEnabled;
+
+    // Shut out by an admin, which is not IS_ENABLED: that one only says whether the verification
+    // email was answered, and unblocking must not verify an address nobody ever confirmed.
+    @Column(name = "IS_BLOCKED")
+    private boolean isBlocked;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "Q_USER_ROLES",
@@ -95,6 +127,11 @@ public class Account extends BaseEntity {
 
     public void setIsEnabled(final boolean isEnabled) {
         this.isEnabled = isEnabled;
+    }
+
+    // Named for the column, like setIsEnabled: BeanPropertyRowMapper reads IS_BLOCKED through it.
+    public void setIsBlocked(final boolean isBlocked) {
+        this.isBlocked = isBlocked;
     }
 
     @Override

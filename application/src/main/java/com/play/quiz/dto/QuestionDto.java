@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.play.quiz.domain.QuizType;
 import com.play.quiz.dto.translation.QuestionTranslationDto;
 import com.play.quiz.enums.QuestionAttribute;
 import com.play.quiz.enums.QuestionType;
@@ -30,9 +31,10 @@ public class QuestionDto {
     private QuestionType type;
     private int complexityLevel;
     private String categoryName;
-    private List<AnswerDto> answers;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
+    private List<AnswerDto> answers;
+    private List<QuizType> excludeQuizTypes;
 
     @NotBlank
     private String content;

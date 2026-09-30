@@ -9,6 +9,8 @@ public interface CategoryService {
 
     CategoryDto save(final CategoryDto category, MultipartFile avatar);
 
+    CategoryDto update(final Long categoryId, final CategoryDto changes, MultipartFile attachment);
+
     CategoryDto getById(final Long categoryId, final String naturalId);
 
     void deleteById(final Long categoryId);
@@ -16,4 +18,6 @@ public interface CategoryService {
     List<CategoryDto> getCategories();
 
     List<CategoryDto> getCategoriesShort();
+
+    byte[] getImage(final Long categoryId);
 }

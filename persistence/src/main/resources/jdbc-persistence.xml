@@ -16,13 +16,12 @@
                 USERNAME = :username,
                 LANG_ID = :language,
                 BIRTHDAY = :birthday,
-                THEME = :theme,
                 AVATAR = :avatar,
                 UPDATED_BY = :updatedBy,
                 UPDATED_DATE = :updatedDate
                 WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
-                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :createdBy, :createdDate, :updatedBy, :updatedDate)
+                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
+                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
             </value>
         </constructor-arg>
     </bean>
@@ -40,12 +39,11 @@
                 USERNAME = :username,
                 LANG_ID = :language,
                 BIRTHDAY = :birthday,
-                THEME = :theme,
                 UPDATED_BY = :updatedBy,
                 UPDATED_DATE = :updatedDate
                 WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
-                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :createdBy, :createdDate, :updatedBy, :updatedDate)
+                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
+                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
             </value>
         </constructor-arg>
     </bean>
@@ -121,12 +119,17 @@
                         ,u.email
                         ,u.password
                         ,u.is_enabled
+                        ,u.is_blocked
+                        ,u.experience
                         ,u.birthday
                         ,u.name
                         ,u.surname
-                        ,u.theme
                         ,u.username
                         ,u.avatar
+                        ,u.preferred_trophy
+                        ,u.last_seen_date
+                        ,u.login_streak
+                        ,u.best_streak
                         ,u.created_date
                         ,u.updated_date
                         ,l.lang_id

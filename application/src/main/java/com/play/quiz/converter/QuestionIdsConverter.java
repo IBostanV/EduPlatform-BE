@@ -1,7 +1,9 @@
 package com.play.quiz.converter;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,6 +22,10 @@ public class QuestionIdsConverter implements AttributeConverter<Set<Long>, Strin
 
     @Override
     public Set<Long> convertToEntityAttribute(String databaseIds) {
+        // Oracle keeps the empty list as NULL.
+        if (Objects.isNull(databaseIds)) {
+            return new HashSet<>();
+        }
         List<String> stringList = Arrays.asList(databaseIds.split(SPLIT_CHAR));
         return stringList.stream().map(String::trim).map(Long::parseLong).collect(Collectors.toSet());
     }

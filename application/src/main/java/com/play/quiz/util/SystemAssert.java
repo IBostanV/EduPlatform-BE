@@ -10,9 +10,18 @@ import org.springframework.util.Assert;
 import java.util.Objects;
 
 public abstract class SystemAssert extends Assert {
+
     public static void isAccountEnabled(boolean isEnabled, String userEmail) {
         if (!isEnabled) {
             throw new AccountDisabledException("Account "+ userEmail +" is disabled");
+        }
+    }
+
+    // Blocked by an admin, which the owner must be able to tell from an unverified address: this
+    // one is not something they can put right themselves.
+    public static void isAccountNotBlocked(boolean isBlocked, String userEmail) {
+        if (isBlocked) {
+            throw new AccountDisabledException("Account "+ userEmail +" has been blocked by an administrator");
         }
     }
 

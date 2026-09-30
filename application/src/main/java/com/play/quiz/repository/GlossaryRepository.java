@@ -5,12 +5,19 @@ import java.util.Optional;
 
 import com.play.quiz.domain.Category;
 import com.play.quiz.domain.Glossary;
+import com.play.quiz.domain.GlossaryType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface GlossaryRepository extends JpaRepository<Glossary, Long> {
+
+    // Terms with no type. A question's wrong options are drawn from the right answer's glossary
+    // type, so a term without one leaves its questions with nothing plausible to offer.
+    long countByTypeIsNull();
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Glossary gl " +
             " SET gl.isActive = CASE WHEN gl.isActive = TRUE THEN FALSE ELSE TRUE END" +
@@ -29,9 +36,18 @@ public interface GlossaryRepository extends JpaRepository<Glossary, Long> {
             " WHERE gl.termId = :#{#glossary.termId}")
     int saveWithoutAttachment(@Param("glossary") final Glossary glossary);
 
+    // Random order, so a question gets different wrong options each time instead of the same first rows.
+    @Query("SELECT g FROM Glossary g WHERE g.type = :type AND g.isActive = TRUE AND g.termId NOT IN :excludedTermIds"
+            + " ORDER BY FUNCTION('DBMS_RANDOM.VALUE')")
+    List<Glossary> findWrongOptions(final GlossaryType type, final List<Long> excludedTermIds, Pageable pageable);
+
     Optional<Glossary> findByKey(String key);
 
     List<Glossary> findAllByCategory(final Category category);
+
+    // Child terms: Q_GLOSSARY.PARENT_ID blocks deleting the parent.
+    @Query("SELECT COUNT(g) FROM Glossary g WHERE g.parent.termId = :termId")
+    long countChildren(Long termId);
 
     @Query(value = "SELECT qg.*" +
             " FROM q_glossary qg" +
