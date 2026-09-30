@@ -33,6 +33,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import com.play.quiz.exception.UserNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 
 @ExtendWith(MockitoExtension.class)
@@ -120,6 +122,16 @@ class AuthenticationServiceImplTest {
         verify(userService, only()).findByEmail(account.getEmail());
         verify(jwtProvider, never()).generate(authentication);
         verify(accountMapper, never()).toDto(adminAccount);
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    // An unknown email is refused like a wrong password, so the form cannot tell which emails exist.
+    @Test
+    void given_unknown_email_when_login_then_bad_credentials() {
+        final AccountDto account = AccountInfoFixture.getAccountInfoWithNoEmailAccount().account();
+        when(userService.findByEmail(account.getEmail())).thenThrow(new UserNotFoundException("none"));
+
+        assertThrows(BadCredentialsException.class, () -> authenticationService.login(account));
         verify(authenticationManager, never()).authenticate(any());
     }
 

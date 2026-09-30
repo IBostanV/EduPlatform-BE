@@ -39,7 +39,8 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     @Query(nativeQuery = true, value = """
     SELECT q.*
     FROM Q_QUESTION q
-    WHERE q.CAT_ID IN (
+    WHERE q.IS_ACTIVE = 1
+      AND q.CAT_ID IN (
           SELECT c.CAT_ID
           FROM Q_CATEGORY c
           START WITH c.CAT_ID = :catId
@@ -51,9 +52,59 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
       )
       AND (:complexityFrom IS NULL OR q.COMPLEXITY_LEVEL >= :complexityFrom)
       AND (:complexityTo IS NULL OR q.COMPLEXITY_LEVEL <= :complexityTo)
+      AND (:quizType IS NULL OR BITAND(:quizType, 32) = 0 OR EXISTS (
+          SELECT 1 FROM Q_ANSWER a
+          JOIN Q_GLOSSARY g ON g.TERM_ID = a.TERM_ID
+          JOIN Q_GLOSSARY_TYPE t ON t.ID = g.TYPE_ID
+          WHERE a.QUESTION_ID = q.QUESTION_ID AND t.OPTIONS LIKE 'map%'
+      ))
+      AND (:quizType IS NULL OR BITAND(:quizType, 192) = 0 OR EXISTS (
+          SELECT 1 FROM Q_ANSWER a
+          JOIN Q_GLOSSARY g ON g.TERM_ID = a.TERM_ID
+          WHERE a.QUESTION_ID = q.QUESTION_ID AND a.CONTENT = g.VALUE
+            AND REGEXP_LIKE(TRIM(g.VALUE), '^-?[0-9][0-9 ,]*([.][0-9]+)?$')
+      ))
+    ORDER BY DBMS_RANDOM.VALUE
+    FETCH FIRST :count ROWS ONLY
     """)
     List<Question> getByCategoryAndParams(Long catId, Long quizType, Integer complexityFrom, Integer complexityTo,
-                                          Pageable pageable);
+                                          int count);
+
+    // Express and stored general knowledge quizzes: any active questions, random.
+    @Query(nativeQuery = true, value = """
+    SELECT q.*
+    FROM Q_QUESTION q
+    WHERE q.IS_ACTIVE = 1
+    ORDER BY DBMS_RANDOM.VALUE
+    FETCH FIRST :count ROWS ONLY
+    """)
+    List<Question> findRandom(int count);
+
+    // Questions close to the player's occupations, random: from every category (and its
+    // subcategories) whose name has a word starting with one of the occupation's DOMAIN keywords.
+    // None when the player has no occupation or turned OCCUPATION_QUIZZES off.
+    @Query(nativeQuery = true, value = """
+    SELECT q.*
+    FROM Q_QUESTION q
+    WHERE q.IS_ACTIVE = 1
+      AND q.CAT_ID IN (
+          SELECT c.CAT_ID
+          FROM Q_CATEGORY c
+          START WITH EXISTS (
+              SELECT 1
+              FROM Q_USER u
+              JOIN Q_USER_OCCUPATION uo ON uo.ACCOUNT_ID = u.ACCOUNT_ID
+              JOIN Q_OCCUPATION o ON o.ID = uo.OCCUPATION_ID
+              WHERE u.EMAIL = :email
+                AND u.OCCUPATION_QUIZZES = 1
+                AND REGEXP_LIKE(c.NAME, '(^|[^[:alpha:]])(' || o.DOMAIN || ')', 'i')
+          )
+          CONNECT BY NOCYCLE PRIOR c.CAT_ID = c.SUBCATEGORY_ID
+      )
+    ORDER BY DBMS_RANDOM.VALUE
+    FETCH FIRST :count ROWS ONLY
+    """)
+    List<Question> findOccupationQuestions(String email, int count);
 
     // Home page mini game: a random active question with exactly one answer, so a single pick is
     // right or wrong. Map questions are left out: their options only make sense on the map.

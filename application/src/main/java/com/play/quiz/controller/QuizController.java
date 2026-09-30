@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping(RestEndpoint.CONTEXT_PATH + REQUEST_MAPPING_QUIZ)
@@ -79,8 +81,9 @@ public class QuizController {
     }
 
     @GetMapping(value = "/express", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<QuizDto> getExpressQuiz() {
-        return ResponseEntity.ok(quizService.getExpressQuiz());
+    // Principal is null for a guest, who gets general knowledge only.
+    public ResponseEntity<QuizDto> getExpressQuiz(final Principal principal) {
+        return ResponseEntity.ok(quizService.getExpressQuiz(Objects.isNull(principal) ? null : principal.getName()));
     }
 
     @GetMapping(value = "/categorized/{catId}", produces = MediaType.APPLICATION_JSON_VALUE)

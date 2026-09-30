@@ -18,6 +18,9 @@ public interface UserQuizHistoryRepository extends JpaRepository<UserQuizHistory
     // time experience is worked out, so it is the one left out by id.
     boolean existsByQuiz_QuizIdAndAccount_AccountIdAndHistoryIdNot(Long quizId, Long accountId, Long historyId);
 
+    // Was there a run of this quiz by this player before this one? Only the first one paid.
+    boolean existsByQuiz_QuizIdAndAccount_AccountIdAndHistoryIdLessThan(Long quizId, Long accountId, Long historyId);
+
     // One page of the signed-in player's own runs, newest first, for the history on their
     // profile. The quiz, its category and its type come along: the list names every row by them.
     // Its own countQuery: the derived one would carry the fetch joins and refuse to count.

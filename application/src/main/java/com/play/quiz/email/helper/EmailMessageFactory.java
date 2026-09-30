@@ -26,7 +26,7 @@ public class EmailMessageFactory {
         Map<String, Object> properties = Map.of(
                 "token", verificationToken.getToken(),
                 "activateAccountServerHost", serverHostUrl + ACTIVATE_ACCOUNT_PATH);
-        log.info("Creating EmailMessage with properties: {}", properties);
+        log.info("Creating account verification email for {}", account.getEmail());
 
         return EmailMessage.builder()
                 .to(account.getEmail())

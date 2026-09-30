@@ -17,6 +17,9 @@ public interface CategoryService {
 
     List<CategoryDto> getCategories();
 
+    /** Every category, hidden ones too, for the content dashboard. */
+    List<CategoryDto> getAllCategoriesForManagement();
+
     List<CategoryDto> getCategoriesShort();
 
     byte[] getImage(final Long categoryId);

@@ -65,6 +65,12 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getCategories());
     }
 
+    // Hidden categories too: the content dashboard edits them. Content roles only (WebSecurity).
+    @GetMapping(value = "/manage", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<CategoryDto>> getCategoriesForManagement() {
+        return ResponseEntity.ok(categoryService.getAllCategoriesForManagement());
+    }
+
     // The picture on its own, for an <img>: the browser loads them side by side and keeps them,
     // where a list carrying every picture as base64 is megabytes on every visit. The ETag lets a
     // repeat visit get a 304; the hour of max-age is how long a replaced picture can look stale.

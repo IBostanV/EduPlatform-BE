@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.play.quiz.domain.Answer;
 import com.play.quiz.domain.Category;
@@ -32,6 +33,7 @@ import com.play.quiz.repository.QuestionRepository;
 import com.play.quiz.service.AnswerService;
 import com.play.quiz.service.GlossaryService;
 import com.play.quiz.service.QuestionService;
+import com.play.quiz.util.Numbers;
 import com.play.quiz.util.SystemAssert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -59,7 +61,8 @@ public class QuestionServiceImpl implements QuestionService {
             "complexityLevel", "complexityLevel",
             "content", "content",
             "category", "category.name",
-            "isActive", "isActive");
+            "isActive", "isActive",
+            "createdDate", "createdDate");
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "questionId");
 
     private final AnswerService answerService;
@@ -74,6 +77,8 @@ public class QuestionServiceImpl implements QuestionService {
     public QuestionDto save(final QuestionDto questionDto) {
         Question question = questionMapper.mapToEntity(questionDto);
         Question savedQuestion = questionRepository.save(processQuestion(question));
+        log.info("Saved question id: {}, type: {}, answers: {}",
+                savedQuestion.getQuestionId(), savedQuestion.getType(), savedQuestion.getAnswers().size());
 
         return questionMapper.mapToDto(savedQuestion);
     }
@@ -139,7 +144,9 @@ public class QuestionServiceImpl implements QuestionService {
                 .attributes(changes.getAttributes() == null ? question.getAttributes() : changes.getAttributes())
                 .build();
 
-        return questionMapper.mapToDto(questionRepository.save(updated));
+        Question saved = questionRepository.save(updated);
+        log.info("Updated question id: {}, type: {}, active: {}", questionId, saved.getType(), saved.getIsActive());
+        return questionMapper.mapToDto(saved);
     }
 
     // Answers and translations go with it (cascade on the entity), which is also what the
@@ -180,13 +187,17 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public void deactivate(final Long questionId) {
         questionRepository.deactivate(questionId);
+        log.info("Deactivated question id: {}", questionId);
     }
 
     @Override
     public List<Question> getGeneralKnowledgeQuestions(int questionCount) {
-        Pageable pageable = PageRequest.of(0, questionCount);
-        Page<Question> entities = questionRepository.findAll(pageable);
-        return entities.getContent();
+        return questionRepository.findRandom(questionCount);
+    }
+
+    @Override
+    public List<Question> getOccupationQuestions(final String email, final int count) {
+        return questionRepository.findOccupationQuestions(email, count);
     }
 
     @Override
@@ -209,15 +220,22 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public List<Question> getByCategoryIdAndParams(Long catId, int questionCount, UserQuizParams userQuizParams) {
         Long quizType = userQuizParams.getQuizType();
-        Pageable pageable = PageRequest.of(0, questionCount);
-
-        return questionRepository.getByCategoryAndParams(catId, quizType, userQuizParams.getComplexityFrom(),
-                userQuizParams.getComplexityTo(), pageable);
+        List<Question> questions = questionRepository.getByCategoryAndParams(catId, quizType, userQuizParams.getComplexityFrom(),
+                userQuizParams.getComplexityTo(), questionCount);
+        log.debug("Found {} of {} questions for category id: {}, type bits: {}, complexity: {}-{}", questions.size(),
+                questionCount, catId, quizType, userQuizParams.getComplexityFrom(), userQuizParams.getComplexityTo());
+        return questions;
     }
 
     @Override
     @Transactional(readOnly = true)
     public QuestionDto getQuestionWithAnswerOptions(final Long questionId) {
+        return getQuestionWithAnswerOptions(questionId, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QuestionDto getQuestionWithAnswerOptions(final Long questionId, final String quizType) {
         Question question = questionRepository.getReferenceById(questionId);
         handleAnswerCountDiscrepancy(question);
         QuestionDto dto = questionMapper.mapToDto(question);
@@ -228,9 +246,45 @@ public class QuestionServiceImpl implements QuestionService {
         List<AnswerDto> options = new ArrayList<>(dto.getAnswers().stream()
                 .filter(answer -> answer.getContent() == null || seen.add(answer.getContent().trim().toLowerCase(Locale.ROOT)))
                 .toList());
+        options = shapeFor(quizType, options);
         Collections.shuffle(options);
         dto.setAnswers(options);
         return dto;
+    }
+
+    /**
+     * The options as a quiz type plays them. {@code options} has the right answer first, as
+     * getQuestionWithAnswerOptions builds it before the shuffle.
+     */
+    private static List<AnswerDto> shapeFor(final String quizType, final List<AnswerDto> options) {
+        if (Objects.isNull(quizType) || options.isEmpty()) return options;
+        switch (quizType) {
+            // The right answer against one wrong option, drawn from the rest.
+            case "ONE_FROM_TWO" -> {
+                if (options.size() <= 2) return options;
+                AnswerDto wrong = options.get(1 + ThreadLocalRandom.current().nextInt(options.size() - 1));
+                return new ArrayList<>(List.of(options.get(0), wrong));
+            }
+            // Typed: there is nothing to pick from, and the options would only give the answer away.
+            case "INPUT" -> {
+                return new ArrayList<>();
+            }
+            // Scaled by the options' values; one that is not a number has no place on the scale.
+            case "VALUES_RANGE" -> {
+                options.removeIf(option -> Objects.isNull(Numbers.parse(option.getContent())));
+                return options;
+            }
+            // The things themselves (the glossary keys) are put in order of their values, which
+            // would give the order away, so the values are not sent.
+            case "IN_ORDER" -> {
+                options.removeIf(option -> Objects.isNull(Numbers.parse(option.getContent())));
+                options.forEach(option -> option.setContent(option.getGlossaryKey()));
+                return options;
+            }
+            default -> {
+                return options;
+            }
+        }
     }
 
     @Override

@@ -34,7 +34,20 @@ application:
       url: http://localhost:8080
   security:
     allowed-origins: http://localhost:3000
-    exposed-headers: Authorization
+    exposed-headers: Authorization,X-Token-Rejected
+    # "Sign in with …": each provider is offered only once both its keys are set. They come from
+    # environment variables, not from a committed file. The callback to register with each
+    # provider is <server url>/login/oauth2/code/<google|github|facebook>.
+    social:
+      google:
+        client-id: ${GOOGLE_CLIENT_ID:}
+        client-secret: ${GOOGLE_CLIENT_SECRET:}
+      github:
+        client-id: ${GITHUB_CLIENT_ID:}
+        client-secret: ${GITHUB_CLIENT_SECRET:}
+      facebook:
+        client-id: ${FACEBOOK_CLIENT_ID:}
+        client-secret: ${FACEBOOK_CLIENT_SECRET:}
   email:
     sending-address: play.quiz.10@gmail.com
     token:

@@ -10,8 +10,10 @@ import com.play.quiz.record.UserSummary;
 import com.play.quiz.record.PasswordInput;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public interface UserService {
 
@@ -34,6 +36,11 @@ public interface UserService {
     boolean verifyOldPassword(PasswordInput password);
 
     Boolean changeLanguage(Language language);
+
+    /** Whether the signed-in player's express quizzes lean to their occupations. */
+    boolean occupationQuizzes();
+
+    boolean setOccupationQuizzes(boolean enabled);
 
     Set<UserRole> getUserRoles();
 
@@ -66,6 +73,12 @@ public interface UserService {
     ManagedAccount setAccountBlocked(Long accountId, boolean blocked);
 
     void deleteAccount(Long accountId);
+
+    /**
+     * Fills the birthday and photo of this account from a social sign-in, where they are still
+     * empty: what the player set themselves is never overwritten. The photo is only fetched when needed.
+     */
+    void fillSocialProfile(String email, LocalDate birthday, Supplier<byte[]> photo);
 
     /** The account with this id, occupations and favourite categories loaded, for its profile page. */
     Account getProfileAccount(Long accountId);

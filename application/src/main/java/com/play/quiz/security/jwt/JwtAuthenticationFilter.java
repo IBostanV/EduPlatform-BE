@@ -45,6 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String ACTUATOR_PATH = "/actuator";
     private static final String ACTIVATE_ACCOUNT_LINK = "/activate-account";
+    /** Tells the site its token was turned away (expired, blocked, forged), so it can sign out. */
+    public static final String TOKEN_REJECTED = "X-Token-Rejected";
 
     @Override
     protected boolean shouldNotFilter(final HttpServletRequest request) {
@@ -82,11 +84,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (!userDetails.isEnabled()) {
                     throw new DisabledException("Account is blocked: " + emailAsUsername);
                 }
-                SecurityContextHolder.getContext().setAuthentication(createAuthentication(request, userDetails));
+                Authentication authentication = createAuthentication(request, userDetails);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
                 ThreadContext.put(RequestLoggingFilter.USER, emailAsUsername);
+                // A fresh hour with every request: tokens expire, players who keep playing never notice.
+                response.setHeader(HttpHeaders.AUTHORIZATION, jwtProvider.generate(authentication));
             } catch (RuntimeException exception) {
                 log.info("Ignoring unusable token for {}: {}", request.getRequestURI(), exception.getMessage());
                 SecurityContextHolder.clearContext();
+                response.setHeader(TOKEN_REJECTED, "true");
             }
         }
         filterChain.doFilter(request, response);

@@ -34,7 +34,8 @@ public class AppearanceService {
         } catch (JsonProcessingException exception) {
             // A value that no longer reads (a setting renamed since) is the site as it comes,
             // not an error on every page the player opens.
-            log.warn("Unreadable appearance on account {}, using the defaults", currentAccountId());
+            log.warn("Unreadable appearance on account {}, using the defaults: {}",
+                    currentAccountId(), exception.getMessage());
             return Appearance.defaults();
         }
     }
@@ -43,13 +44,15 @@ public class AppearanceService {
     @Transactional
     public Appearance save(final Appearance appearance) {
         Appearance settings = Objects.isNull(appearance) ? Appearance.defaults() : appearance.validated();
+        Long accountId = currentAccountId();
         try {
             // Nothing changed is stored as nothing, so a full reset leaves the column as it started.
-            accountRepository.setAppearance(currentAccountId(),
+            accountRepository.setAppearance(accountId,
                     settings.isDefault() ? null : objectMapper.writeValueAsString(settings));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Could not store the appearance", exception);
         }
+        log.info("Account {} saved appearance (defaults: {})", accountId, settings.isDefault());
         return get();
     }
 

@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.play.quiz.domain.Category;
 import com.play.quiz.domain.Quiz;
+import com.play.quiz.domain.QuizType;
 import com.play.quiz.domain.UserQuizHistory;
 
 /**
@@ -36,14 +38,14 @@ public record QuizHistoryEntry(Long historyId,
 
         return new QuizHistoryEntry(
                 history.getHistoryId(),
-                Optional.ofNullable(quiz.getCategory()).map(category -> category.getName()).orElse(null),
-                Optional.ofNullable(quiz.getType()).map(type -> type.getName()).orElse(null),
+                Optional.ofNullable(quiz.getCategory()).map(Category::getName).orElse(null),
+                Optional.ofNullable(quiz.getType()).map(QuizType::getName).orElse(null),
                 quiz.isCustom(),
                 history.getRightAnswers(),
                 history.getTotalAnswers(),
                 history.getSpentTime(),
                 Objects.nonNull(history.getCompletedDate()) ? history.getCompletedDate() : history.getCreatedDate(),
                 quiz.getQuizId(),
-                Optional.ofNullable(quiz.getCategory()).map(category -> category.getCatId()).orElse(null));
+                Optional.ofNullable(quiz.getCategory()).map(Category::getCatId).orElse(null));
     }
 }

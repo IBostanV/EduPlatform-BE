@@ -13,6 +13,7 @@ import com.play.quiz.repository.UserGroupRepository;
 import com.play.quiz.service.MessageService;
 import com.play.quiz.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static com.play.quiz.controller.RestEndpoint.WS_BROKER_SOLO;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
@@ -68,6 +70,7 @@ public class MessageServiceImpl implements MessageService {
     public MessageDto sendPublicMessage(final MessageDto payload, String sessionId, final Principal principal) {
         MessageDto message = builder(payload, sessionId, principal);
         Message entity = messageRepository.save(messageMapper.toEntity(message));
+        log.info("Saved public message id: {}", entity.getMessageId());
 
         return withSender(messageMapper.toDto(entity));
     }
@@ -78,6 +81,7 @@ public class MessageServiceImpl implements MessageService {
     public void sendPrivateMessage(final MessageDto payload, String sessionId, final Principal principal) {
         MessageDto message = builder(payload, sessionId, principal);
         Message saved = messageRepository.save(messageMapper.toEntity(message));
+        log.info("Saved private message id: {} in group id: {}", saved.getMessageId(), saved.getDestination().getGroupId());
 
         pushToGroup(saved.getDestination().getGroupId(),
                 withEvent(withSender(messageMapper.toDto(saved)), MessageEvent.CREATED));
@@ -93,6 +97,7 @@ public class MessageServiceImpl implements MessageService {
         Message message = findOwnMessage(messageId, principalName);
         Message saved = messageRepository.save(message.toBuilder().content(clean(content)).build());
 
+        log.info("Edited message id: {}", messageId);
         MessageDto dto = withSender(messageMapper.toDto(saved));
         pushToGroup(saved.getDestination().getGroupId(), withEvent(dto, MessageEvent.EDITED));
         return dto;
@@ -105,6 +110,7 @@ public class MessageServiceImpl implements MessageService {
         Message message = findOwnMessage(messageId, principalName);
         Long groupId = message.getDestination().getGroupId();
         messageRepository.delete(message);
+        log.info("Deleted message id: {} from group id: {}", messageId, groupId);
 
         pushToGroup(groupId, MessageDto.builder()
                 .messageId(messageId)
@@ -126,6 +132,8 @@ public class MessageServiceImpl implements MessageService {
     private void pushToGroup(final Long groupId, final MessageDto message) {
         Set<Account> users = userService.getUsersByUserGroupId(groupId);
         users.forEach(user -> simpMessagingTemplate.convertAndSendToUser(user.getEmail(), WS_BROKER_SOLO, message));
+        log.debug("Pushed {} event for message id: {} to {} members of group id: {}",
+                message.getEvent(), message.getMessageId(), users.size(), groupId);
     }
 
     // SOURCE holds the author's email, which the chat cannot link to a profile. The id and name

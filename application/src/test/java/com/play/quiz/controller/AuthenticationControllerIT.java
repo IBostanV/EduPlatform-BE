@@ -138,7 +138,7 @@ class AuthenticationControllerIT {
     @Test
     void given_valid_credentials_when_register_then_user_registered(final CapturedOutput output) throws Exception {
         String username = "vanyok93@yahoo.com";
-        String content = "{\"email\":\"" + username + "\",\"password\":\"Qwerty123\"}";
+        String content = "{\"email\":\"" + username + "\",\"password\":\"Kettle9-blue\"}";
         String bodyMessage = "{\"id\":1,\"email\":\"vanyok93@yahoo.com\",\"roles\":[{\"roleId\":2,\"name\":\"ROLE_USER\"}],\"enabled\":false}";
 
         mockMvc.perform(post(REQUEST_MAPPING_AUTH + "/register")

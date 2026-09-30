@@ -79,6 +79,17 @@ public class UserController {
         return ResponseEntity.ok(userOccupationService.getAllOccupations());
     }
 
+    // Whether express quizzes lean to the player's occupations; a switch on the profile page.
+    @GetMapping(value = "/occupation-quizzes", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Boolean> getOccupationQuizzes() {
+        return ResponseEntity.ok(userService.occupationQuizzes());
+    }
+
+    @PutMapping(value = "/occupation-quizzes", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Boolean> setOccupationQuizzes(@RequestBody final boolean enabled) {
+        return ResponseEntity.ok(userService.setOccupationQuizzes(enabled));
+    }
+
     @GetMapping(value = "/get-user-roles", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Set<UserRole>> getUserRoles() {
         return ResponseEntity.ok(userService.getUserRoles());

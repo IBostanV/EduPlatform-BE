@@ -1,6 +1,7 @@
 package com.play.quiz.service.impl;
 
 import com.play.quiz.aop.annotation.Conditional;
+import com.play.quiz.coin.Coins;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
 import com.play.quiz.domain.VerificationToken;
@@ -26,6 +27,7 @@ import com.play.quiz.repository.LanguageRepository;
 import com.play.quiz.repository.RoleRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.util.ExperiencePayout;
+import com.play.quiz.util.PasswordPolicy;
 import com.play.quiz.util.SystemAssert;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserGroupService;
@@ -44,11 +46,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -88,7 +92,9 @@ public class UserServiceImpl implements UserService {
         }
 
         final Account account = accountMapper.toEntity(accountDto, avatar);
-        return userRepository.save(account);
+        Account saved = userRepository.save(account);
+        log.info("Saved account id: {}, new avatar: {}", saved.getAccountId(), Objects.nonNull(avatar));
+        return saved;
     }
 
     @Override
@@ -115,9 +121,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void activateAccount(final @NonNull String token) {
         VerificationToken verificationToken = verificationTokenService.findByToken(token)
-                .orElseThrow(() -> new RecordNotFoundException("No records found for token: " + token));
+                .orElseThrow(() -> new RecordNotFoundException("No verification token found"));
 
         handleAccountActivation(verificationToken);
+        log.info("Activated account id: {}", verificationToken.getAccount().getAccountId());
     }
 
     private void handleAccountActivation(final VerificationToken verificationToken) {
@@ -142,6 +149,7 @@ public class UserServiceImpl implements UserService {
         VerificationToken verificationToken = verificationTokenService.createVerificationToken(account);
         EmailMessage emailMessage = emailMessageFactory.createAccountVerificationEmailMessage(account, verificationToken);
         handleEmailSending(emailMessage);
+        log.info("Sent verification email for account id: {}", account.getAccountId());
     }
 
     private void handleEmailSending(final EmailMessage emailMessage) {
@@ -149,7 +157,7 @@ public class UserServiceImpl implements UserService {
             log.debug("Sending email to: {}", emailMessage.getTo());
             emailService.sendEmail(emailMessage);
         } catch (MessagingException exception) {
-            log.warn(exception.getMessage());
+            log.warn("Sending email failed: {}", exception.getMessage(), exception);
             throw new EmailSendFailedException(exception.getMessage());
         }
     }
@@ -162,9 +170,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void changePassword(PasswordInput newPassword) {
+        PasswordPolicy.requireStrong(newPassword.password(), authenticationFacade.getPrincipal().getUsername());
         char[] passwordCharArray = passwordEncoder.encode(new String(newPassword.password())).toCharArray();
         String username = authenticationFacade.getPrincipal().getUsername();
         updatePassword(username, passwordCharArray);
+        log.info("Password changed");
     }
 
     private void updatePassword(String username, char[] passwordCharArray) {
@@ -175,9 +185,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean occupationQuizzes() {
+        return accountRepository.findOccupationQuizzes(authenticationFacade.getPrincipal().getUsername());
+    }
+
+    @Override
+    @Transactional
+    public boolean setOccupationQuizzes(final boolean enabled) {
+        accountRepository.setOccupationQuizzes(authenticationFacade.getPrincipal().getUsername(), enabled);
+        log.info("Occupation quizzes set to: {}", enabled);
+        return enabled;
+    }
+
+    @Override
     public Boolean changeLanguage(Language language) {
         String userEmail = authenticationFacade.getPrincipal().getUsername();
-        return userRepository.changeLanguage(language, userEmail);
+        Boolean changed = userRepository.changeLanguage(language, userEmail);
+        log.info("Language change to id: {}, result: {}", language.getLangId(), changed);
+        return changed;
     }
 
     @Override
@@ -219,28 +244,35 @@ public class UserServiceImpl implements UserService {
 
         accountRepository.addFriend(userId, friendId);
         accountRepository.addFriend(friendId, userId);
+        log.info("Account {} and account {} are now friends", userId, friendId);
     }
 
     @Override
     @Transactional
     public void removeFriend(Long friendId) {
-        accountRepository.removeFriend(getCurrentAccountId(), friendId);
+        Long userId = getCurrentAccountId();
+        accountRepository.removeFriend(userId, friendId);
+        log.info("Account {} removed friend {}", userId, friendId);
     }
 
     @Override
     @Transactional
     public void addExperience(final Long accountId, final int amount) {
         if (amount <= 0) {
+            log.debug("No experience to award account {}: amount {}", accountId, amount);
             return;
         }
-        log.debug("Award {} experience to account {}", amount, accountId);
+        int coins = Coins.forExperience(amount);
         accountRepository.addExperience(accountId, amount);
+        accountRepository.addCoins(accountId, coins);
 
         // Friends' news says when somebody levelled up, which the experience total cannot. The
         // update above holds the row until commit, so what is read back is exactly what this call
         // left: the total before it is that minus the amount.
         int after = Objects.requireNonNullElse(accountRepository.findExperience(accountId), 0);
         int reached = PlayerLevel.levelFor(after);
+        log.info("Account {} gained {} experience ({} -> {}) and {} coins, level {} -> {}",
+                accountId, amount, after - amount, after, coins, PlayerLevel.levelFor(after - amount), reached);
         for (int level = PlayerLevel.levelFor(after - amount) + 1; level <= reached; level++) {
             levelUpRepository.record(accountId, level);
         }
@@ -248,7 +280,8 @@ public class UserServiceImpl implements UserService {
 
     /**
      * The first time a player is seen on a given day: the run of days grows if yesterday was the
-     * last one and starts again if it was not, and the day is paid for.
+     * last one and starts again if it was not, and the day is paid for. Days missed in between
+     * are covered by the player's streak freezes, one each, if they hold enough for all of them.
      *
      * <p>Days visited rather than days logged in: the token lasts longer than a day, so counting
      * logins would break the run of anybody who simply stays signed in.
@@ -259,13 +292,26 @@ public class UserServiceImpl implements UserService {
         Account account = findByEmail(email);
         LocalDate today = LocalDate.now();
         if (today.equals(account.getLastSeenDate())) {
+            log.debug("Account {} already recorded a visit today", account.getAccountId());
             return account;
         }
 
-        int streak = today.minusDays(1).equals(account.getLastSeenDate()) ? account.getLoginStreak() + 1 : 1;
+        int missed = account.getLastSeenDate() == null ? 0
+                : (int) ChronoUnit.DAYS.between(account.getLastSeenDate(), today) - 1;
+        boolean frozen = missed > 0 && account.getStreakFreezes() >= missed;
+        int streak = missed == 0 || frozen ? account.getLoginStreak() + 1 : 1;
         if (accountRepository.recordVisit(account.getAccountId(), today, streak) != 1) {
             // Another request got there first this morning; it paid, so this one does not.
+            log.info("Visit of account {} already recorded by a concurrent request", account.getAccountId());
             return findByEmail(email);
+        }
+        // Only the request that won the day gets here, so the freezes cannot be spent twice.
+        if (frozen) {
+            accountRepository.useStreakFreezes(account.getAccountId(), missed);
+            log.info("Account {} kept its streak with {} freeze(s)", account.getAccountId(), missed);
+        } else if (missed > 0) {
+            log.info("Account {} streak reset: missed {} day(s), had {} freeze(s), streak was {}",
+                    account.getAccountId(), missed, account.getStreakFreezes(), account.getLoginStreak());
         }
 
         addExperience(account.getAccountId(), ExperiencePayout.forVisit(streak));
@@ -307,7 +353,9 @@ public class UserServiceImpl implements UserService {
                 .createdDate(LocalDateTime.now())
                 .build();
 
-        return ManagedAccount.of(accountRepository.save(account));
+        Account saved = accountRepository.save(account);
+        log.info("Admin created account id: {}, roles: {}", saved.getAccountId(), input.roles());
+        return ManagedAccount.of(saved);
     }
 
     @Override
@@ -321,7 +369,9 @@ public class UserServiceImpl implements UserService {
         account.setRoles(rolesOf(input));
         account.setUpdatedDate(LocalDateTime.now());
 
-        return ManagedAccount.of(accountRepository.save(account));
+        ManagedAccount updated = ManagedAccount.of(accountRepository.save(account));
+        log.info("Admin updated account id: {}, roles: {}", accountId, input.roles());
+        return updated;
     }
 
     @Override
@@ -333,7 +383,9 @@ public class UserServiceImpl implements UserService {
         account.setIsBlocked(blocked);
         account.setUpdatedDate(LocalDateTime.now());
 
-        return ManagedAccount.of(accountRepository.save(account));
+        ManagedAccount updated = ManagedAccount.of(accountRepository.save(account));
+        log.info("Admin set account id: {} blocked: {}", accountId, blocked);
+        return updated;
     }
 
     // Everything the account left behind (quizzes, history, messages) is tied to it by a foreign
@@ -344,6 +396,24 @@ public class UserServiceImpl implements UserService {
     public void deleteAccount(final Long accountId) {
         refuseOnSelf(accountId, "You cannot delete your own account");
         accountRepository.delete(getAccount(accountId));
+        log.info("Admin deleted account id: {}", accountId);
+    }
+
+    @Override
+    @Transactional
+    public void fillSocialProfile(final String email, final LocalDate birthday, final Supplier<byte[]> photo) {
+        accountRepository.findByEmail(email).ifPresentOrElse(account -> {
+            boolean fillBirthday = Objects.isNull(account.getBirthday());
+            boolean fillAvatar = Objects.isNull(account.getAvatar());
+            if (fillBirthday) {
+                account.setBirthday(birthday);
+            }
+            if (fillAvatar) {
+                account.setAvatar(photo.get());
+            }
+            log.debug("Social profile for account {}: birthday filled: {}, avatar filled: {}",
+                    account.getAccountId(), fillBirthday, fillAvatar);
+        }, () -> log.warn("No account found to fill the social profile of"));
     }
 
     @Override

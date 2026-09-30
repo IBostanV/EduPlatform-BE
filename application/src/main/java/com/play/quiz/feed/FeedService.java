@@ -34,6 +34,7 @@ import com.play.quiz.trophy.TrophyCatalog;
 import com.play.quiz.trophy.TrophyDefinition;
 import com.play.quiz.trophy.TrophyService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
  * found later: when the player last read their notifications, when somebody reached a level
  * ({@link LevelUp}), and what people post on the News page ({@link NewsPost}).
  */
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class FeedService {
@@ -138,6 +140,8 @@ public class FeedService {
         LocalDateTime readAt = accountRepository.findNotificationsReadAt(accountId);
         List<FeedItem> newest = newestFirst(items);
         long unread = newest.stream().filter(item -> Objects.isNull(readAt) || item.at().isAfter(readAt)).count();
+        log.debug("Notifications for account {}: {} found, {} shown, {} unread (read at {})",
+                accountId, items.size(), newest.size(), unread, readAt);
 
         return new FeedItem.Notifications(unread, newest);
     }
@@ -145,7 +149,9 @@ public class FeedService {
     /** Everything up to now has been seen. */
     @Transactional
     public void markNotificationsRead() {
-        accountRepository.setNotificationsReadAt(currentAccount().getAccountId(), LocalDateTime.now());
+        Long accountId = currentAccount().getAccountId();
+        accountRepository.setNotificationsReadAt(accountId, LocalDateTime.now());
+        log.info("Account {} marked notifications read", accountId);
     }
 
     /**
@@ -170,6 +176,7 @@ public class FeedService {
 
         Set<FeedItem.Type> hidden = currentAccountId().map(this::hiddenNewsOf).orElse(Set.of());
         items.removeIf(item -> hidden.contains(item.type()));
+        log.debug("News: {} items after hiding {}", items.size(), hidden);
         return newestFirst(items);
     }
 
@@ -187,7 +194,9 @@ public class FeedService {
             throw new IllegalArgumentException("Only news can be hidden: " + FeedItem.Type.NEWS);
         }
         String stored = kinds.stream().map(Enum::name).sorted().collect(Collectors.joining(","));
-        accountRepository.setHiddenNews(currentAccount().getAccountId(), stored.isEmpty() ? null : stored);
+        Long accountId = currentAccount().getAccountId();
+        accountRepository.setHiddenNews(accountId, stored.isEmpty() ? null : stored);
+        log.info("Account {} now hides news {}", accountId, kinds);
         return hiddenNews();
     }
 
@@ -229,6 +238,7 @@ public class FeedService {
                 .createdDate(LocalDateTime.now())
                 .patch(isAdmin())
                 .build());
+        log.info("Account {} posted news {} (patch: {})", author.getAccountId(), post.getNewsId(), post.isPatch());
 
         return post.isPatch() ? patchItem(post) : friendPostItem(post, author, true);
     }
@@ -242,6 +252,7 @@ public class FeedService {
             throw new AccessDeniedException("Only its author or an admin can delete post " + newsId);
         }
         newsPostRepository.delete(post);
+        log.info("News post {} by account {} deleted", newsId, post.getCreatedBy());
     }
 
     public record NewsInput(String title, String content) {}

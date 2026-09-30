@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.LongStream;
 
+import com.play.quiz.conquest.ConquestAttemptRepository;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Question;
 import com.play.quiz.domain.Quiz;
@@ -55,6 +56,7 @@ class QuizExperienceAwardTest {
     @Mock private QuizRepository quizRepository;
     @Mock private QuizTypeRepository quizTypeRepository;
     @Mock private CustomQuizService customQuizService;
+    @Mock private ConquestAttemptRepository conquestAttemptRepository;
 
     private UserQuizHistoryService historyService;
 
@@ -62,7 +64,7 @@ class QuizExperienceAwardTest {
     void init() {
         historyService = new UserQuizHistoryServiceImpl(userService, questionService, glossaryService,
                 new UserQuizHistoryMapperImpl(), authenticationFacade, userQuizHistoryRepository, quizRepository,
-                quizTypeRepository, customQuizService);
+                quizTypeRepository, customQuizService, conquestAttemptRepository);
 
         Account player = AccountFixture.getAdminAccount();
         when(authenticationFacade.getPrincipal()).thenReturn((User) UserDetailsFixture.getAdminUserDetails());

@@ -14,6 +14,7 @@ import com.play.quiz.repository.GlossaryTypeRepository;
 import com.play.quiz.service.GlossaryService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,7 @@ import java.util.Objects;
 
 import static com.play.quiz.util.Constant.SAVE_OPERATION_SUCCESSFULLY;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class GlossaryServiceImpl implements GlossaryService {
@@ -39,6 +41,7 @@ public class GlossaryServiceImpl implements GlossaryService {
 
         if (Objects.nonNull(attachment) || Objects.isNull(glossaryDto.getTermId())) {
             Glossary entity = glossaryRepository.save(glossary);
+            log.info("Saved glossary id: {}, key: {}, with attachment: {}", entity.getTermId(), entity.getKey(), Objects.nonNull(attachment));
             return glossaryMapper.toDto(entity);
         }
 
@@ -49,9 +52,11 @@ public class GlossaryServiceImpl implements GlossaryService {
         int savedWithoutAttachmentResult = glossaryRepository.saveWithoutAttachment(glossary);
 
         if (!Objects.equals(savedWithoutAttachmentResult, SAVE_OPERATION_SUCCESSFULLY)) {
+            log.warn("Glossary id: {} not updated, rows affected: {}", glossary.getTermId(), savedWithoutAttachmentResult);
             throw new EntityNotUpdatedException("Exception during glossary saving");
         }
 
+        log.info("Updated glossary id: {} keeping its attachment", glossary.getTermId());
         return glossaryMapper.toDto(glossaryRepository.getReferenceById(glossary.getTermId()));
     }
 
@@ -81,12 +86,16 @@ public class GlossaryServiceImpl implements GlossaryService {
     @Override
     @Transactional
     public Integer toggleGlossary(final Long glossaryId) {
-        return glossaryRepository.toggleGlossary(glossaryId);
+        Integer updated = glossaryRepository.toggleGlossary(glossaryId);
+        log.info("Toggled glossary id: {}, rows affected: {}", glossaryId, updated);
+        return updated;
     }
 
     @Override
     public GlossaryType saveGlossaryType(final GlossaryType glossaryType) {
-        return glossaryTypeRepository.save(glossaryType);
+        GlossaryType saved = glossaryTypeRepository.save(glossaryType);
+        log.info("Saved glossary type id: {}, name: {}", saved.getId(), saved.getName());
+        return saved;
     }
 
     // Loads and copies the stored type, so its created date and anything else not edited stay.
@@ -95,11 +104,13 @@ public class GlossaryServiceImpl implements GlossaryService {
     public GlossaryType updateGlossaryType(final Long typeId, final GlossaryType changes) {
         GlossaryType type = glossaryTypeRepository.findById(typeId)
                 .orElseThrow(() -> new RecordNotFoundException("No glossary type with id: " + typeId));
-        return glossaryTypeRepository.save(type.toBuilder()
+        GlossaryType saved = glossaryTypeRepository.save(type.toBuilder()
                 .name(changes.getName())
                 .options(changes.getOptions())
                 .isActive(changes.getIsActive())
                 .build());
+        log.info("Updated glossary type id: {}, name: {}, active: {}", typeId, saved.getName(), saved.getIsActive());
+        return saved;
     }
 
     // Refused while glossaries use it, with a message the admin can act on, rather than the
@@ -113,6 +124,7 @@ public class GlossaryServiceImpl implements GlossaryService {
                     + " glossar" + (usedBy == 1 ? "y" : "ies") + ". Change their type first.");
         }
         glossaryTypeRepository.deleteById(typeId);
+        log.info("Deleted glossary type id: {}", typeId);
     }
 
     // Same idea: questions answered by this term, or terms nested under it, keep it in place.
@@ -131,6 +143,7 @@ public class GlossaryServiceImpl implements GlossaryService {
                     + " other glossar" + (children == 1 ? "y" : "ies") + ". Move or delete them first.");
         }
         glossaryRepository.deleteById(glossaryId);
+        log.info("Deleted glossary id: {}", glossaryId);
     }
 
     @Override

@@ -89,9 +89,12 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     private Account executeSave(final Long accountId, final Account account) {
-        namedJdbcTemplate.update(
+        int rows = namedJdbcTemplate.update(
                 Objects.nonNull(account.getAvatar()) ? saveSql : saveNoAvatarSql,
                 getProperties(accountId, account));
+        if (rows == 0) {
+            log.warn("Saving user with id: {} affected no rows", accountId);
+        }
 
         if (Objects.isNull(account.getAccountId())) {
             Function<Role, Long> roleIdFunction = Role::getRoleId;
@@ -191,18 +194,18 @@ public class UserRepositoryImpl implements UserRepository {
         try {
             AccountRowMapper accountRowMapper = new AccountRowMapper();
             Account account = namedJdbcTemplate.queryForObject(findByEmailSql, Map.of(EMAIL, email), accountRowMapper);
-            log.info("Found user with email: {}", email);
+            log.debug("Found user with email: {}", email);
 
             return Optional.ofNullable(account);
         } catch (EmptyResultDataAccessException exception) {
-            log.info("No user found with email: {}", email);
+            log.debug("No user found with email: {}", email);
             return Optional.empty();
         }
     }
 
     private Account setAccountRoles(final Account account) {
         List<Role> roles = handleRoles(account);
-        log.info("Found roles: {} for user: {}", roles, account.getEmail());
+        log.debug("Found roles: {} for user: {}", roles, account.getEmail());
         account.setRoles(roles);
         return account;
     }
@@ -291,7 +294,9 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public void enableAccount(final Long accountId) {
-        namedJdbcTemplate.update(activateAccountSql, Map.of(ACCOUNT_ID, accountId));
+        if (namedJdbcTemplate.update(activateAccountSql, Map.of(ACCOUNT_ID, accountId)) == 0) {
+            log.warn("Activating account id: {} affected no rows", accountId);
+        }
     }
 
     @Override
@@ -371,6 +376,9 @@ public class UserRepositoryImpl implements UserRepository {
         int result = namedJdbcTemplate.update(updateUserLanguageSql,
                 Map.of("langId", language.getLangId(),
                         "email", email));
+        if (result != 1) {
+            log.warn("Changing language to {} for {} affected {} rows", language.getLangId(), email, result);
+        }
         return Objects.equals(result, 1);
     }
 

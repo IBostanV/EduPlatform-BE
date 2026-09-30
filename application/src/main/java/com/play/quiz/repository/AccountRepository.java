@@ -39,6 +39,31 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("UPDATE Account a SET a.experience = COALESCE(a.experience, 0) + :amount WHERE a.accountId = :accountId")
     void addExperience(Long accountId, int amount);
 
+    @Modifying
+    @Query("UPDATE Account a SET a.coins = a.coins + :amount WHERE a.accountId = :accountId")
+    void addCoins(Long accountId, int amount);
+
+    /**
+     * Takes {@code amount} coins if the player has them. The check and the write are one
+     * statement, so two purchases at once cannot both spend the same coins. Returns 1 if paid.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.coins = a.coins - :amount WHERE a.accountId = :accountId AND a.coins >= :amount")
+    int spendCoins(Long accountId, int amount);
+
+    /** One more streak freeze, unless the player already holds {@code max}. Returns 1 if added. */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.streakFreezes = a.streakFreezes + 1 WHERE a.accountId = :accountId AND a.streakFreezes < :max")
+    int addStreakFreeze(Long accountId, int max);
+
+    /** Uses {@code days} freezes to cover missed days, if there are that many. Returns 1 if used. */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.streakFreezes = a.streakFreezes - :days WHERE a.accountId = :accountId AND a.streakFreezes >= :days")
+    int useStreakFreezes(Long accountId, int days);
+
+    @Query("SELECT a.coins FROM Account a WHERE a.accountId = :accountId")
+    int findCoins(Long accountId);
+
     /**
      * Sets the trophy shown beside a player's name.
      *
@@ -108,6 +133,13 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Account a SET a.hiddenNews = :hiddenNews WHERE a.accountId = :accountId")
     void setHiddenNews(Long accountId, String hiddenNews);
+
+    @Query("SELECT a.occupationQuizzes FROM Account a WHERE a.email = :email")
+    boolean findOccupationQuizzes(String email);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.occupationQuizzes = :enabled WHERE a.email = :email")
+    void setOccupationQuizzes(String email, boolean enabled);
 
     @Query("SELECT a.appearance FROM Account a WHERE a.accountId = :accountId")
     String findAppearance(Long accountId);

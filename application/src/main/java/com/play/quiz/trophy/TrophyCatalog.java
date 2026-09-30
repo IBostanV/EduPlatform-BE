@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import com.play.quiz.domain.Category;
 import com.play.quiz.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  * category id, which is what ties an earned row back to a category that may since have been
  * renamed.
  */
+@Log4j2
 @Component
 @RequiredArgsConstructor
 public class TrophyCatalog {
@@ -113,6 +115,7 @@ public class TrophyCatalog {
             return Optional.of(Long.parseLong(code.substring(CATEGORY_PREFIX.length())));
         } catch (NumberFormatException exception) {
             // A code from an older shape of this list; nothing to draw for it.
+            log.warn("Unreadable category trophy code {}, drawing nothing", code);
             return Optional.empty();
         }
     }

@@ -8,6 +8,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
  * ponytail: in memory, per instance; move it to a shared store (Redis, bucket4j) if the backend
  * ever runs on more than one node.
  */
+@Log4j2
 @Component
 public class FeedbackRateLimiter {
 
@@ -29,19 +31,32 @@ public class FeedbackRateLimiter {
 
     private final Map<String, Deque<Instant>> sent = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final int maxMessages;
+    private final Duration window;
 
     public FeedbackRateLimiter() {
         this(Clock.systemUTC());
     }
 
     FeedbackRateLimiter(final Clock clock) {
+        this(clock, MAX_MESSAGES, WINDOW);
+    }
+
+    // Another open endpoint with its own cap (the browser error reports).
+    public FeedbackRateLimiter(final int maxMessages, final Duration window) {
+        this(Clock.systemUTC(), maxMessages, window);
+    }
+
+    private FeedbackRateLimiter(final Clock clock, final int maxMessages, final Duration window) {
         this.clock = clock;
+        this.maxMessages = maxMessages;
+        this.window = window;
     }
 
     /** Records a message from this sender and says whether it is allowed. */
     public boolean tryAcquire(final String sender) {
         Instant now = clock.instant();
-        Instant windowStart = now.minus(WINDOW);
+        Instant windowStart = now.minus(window);
         if (sent.size() > CLEANUP_THRESHOLD) {
             sent.values().removeIf(times -> {
                 synchronized (times) {
@@ -55,7 +70,8 @@ public class FeedbackRateLimiter {
             while (!times.isEmpty() && times.peekFirst().isBefore(windowStart)) {
                 times.pollFirst();
             }
-            if (times.size() >= MAX_MESSAGES) {
+            if (times.size() >= maxMessages) {
+                log.info("Refused {}: {} messages within {}", sender, times.size(), window);
                 return false;
             }
             times.addLast(now);

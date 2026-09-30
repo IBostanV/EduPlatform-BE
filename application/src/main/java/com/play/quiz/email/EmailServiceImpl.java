@@ -9,6 +9,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -27,9 +28,17 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendEmail(final EmailMessage emailMessage) throws MessagingException {
         MimeMessage mimeMessage = configureEmailMessage(emailMessage);
-        if (emailEnabled) {
-            emailSender.send(mimeMessage);
+        if (!emailEnabled) {
+            log.info("Email sending disabled: '{}' to {} not sent", emailMessage.getSubject(), emailMessage.getTo());
+            return;
         }
+        try {
+            emailSender.send(mimeMessage);
+        } catch (MailException exception) {
+            log.error("Sending '{}' to {} failed: {}", emailMessage.getSubject(), emailMessage.getTo(), exception.getMessage());
+            throw exception;
+        }
+        log.info("Sent '{}' to {}", emailMessage.getSubject(), emailMessage.getTo());
     }
 
     private MimeMessage configureEmailMessage(final EmailMessage emailMessage) throws MessagingException {
@@ -41,7 +50,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private void configureEmailMessage(final EmailMessage emailMessage, final MimeMessageHelper mimeMessageHelper) throws MessagingException {
-        log.debug("Configure MailMessage using email message: {}", emailMessage);
+        log.debug("Configure MailMessage from template {} for {}", emailMessage.getTemplate(), emailMessage.getTo());
         Context context = new Context(Locale.getDefault(), emailMessage.getProperties());
         String emailText = templateEngine.process(emailMessage.getTemplate(), context);
 

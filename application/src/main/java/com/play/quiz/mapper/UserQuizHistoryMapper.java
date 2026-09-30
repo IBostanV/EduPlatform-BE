@@ -31,6 +31,10 @@ public interface UserQuizHistoryMapper {
     @Mapping(target = "type", source = "quizType")
     Quiz quizDtoToQuiz(final QuizDto quizDto);
 
+    // And back, so a run is marked the way its quiz type was played.
+    @Mapping(target = "quizType", source = "type")
+    QuizDto quizToQuizDto(final Quiz quiz);
+
     default AnswerDto answerToAnswerDto(final Answer answer) {
         return AnswerDto.builder()
                 .content(answer.getContent())

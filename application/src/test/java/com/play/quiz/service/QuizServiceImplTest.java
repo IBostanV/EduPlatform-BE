@@ -33,7 +33,6 @@ import static com.play.quiz.util.Constant.EXPRESS_QUIZ_DEFAULT_TIME_SECONDS;
 import com.play.quiz.repository.QuizRepository;
 import com.play.quiz.repository.QuizTypeRepository;
 import com.play.quiz.service.impl.QuizServiceImpl;
-import com.play.quiz.util.EncryptionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,7 +68,6 @@ class QuizServiceImplTest {
     @BeforeEach
     void init() {
         QuizMapper quizMapper = new QuizMapperImpl();
-        EncryptionUtils encryptionUtils = new EncryptionUtils(propertyRepository);
         quizService = new QuizServiceImpl(categoryService, propertyRepository, questionMapper, questionService,
                 quizMapper, quizRepository, quizTypeRepository);
     }
@@ -108,14 +106,34 @@ class QuizServiceImplTest {
         when(categoryService.getById(1L, null)).thenReturn(CategoryFixture.getCategoryDto());
         when(questionService.getGeneralKnowledgeQuestions(1))
                 .thenReturn(List.of(QuestionFixture.getNoAnswerQuestion(1L, "Life")));
-        when(questionService.getQuestionWithAnswerOptions(1L)).thenReturn(QuestionFixture.getQuestionDto());
+        when(questionService.getQuestionWithAnswerOptions(1L, null)).thenReturn(QuestionFixture.getQuestionDto());
 
-        QuizDto result = quizService.getExpressQuiz();
+        QuizDto result = quizService.getExpressQuiz(null);
 
         // Everything the browser needs to ask the whole quiz: no request per question.
         assertEquals(Set.of(1L), result.getQuestionIds());
         assertEquals(1, result.getQuestionList().size());
         assertEquals(QuestionFixture.getQuestionDto().getAnswers(), result.getQuestionList().getFirst().getAnswers());
+    }
+
+    @Test
+    void given_a_player_with_an_occupation_when_building_an_express_quiz_then_half_leans_to_it() {
+        when(propertyRepository.findByName(DEFAULT_EXPRESS_QUESTIONS_COUNT))
+                .thenReturn(Property.builder().value("4").build());
+        when(propertyRepository.findByName(EXPRESS_QUIZ_DEFAULT_TIME_SECONDS))
+                .thenReturn(Property.builder().value("60").build());
+        when(categoryService.getById(1L, null)).thenReturn(CategoryFixture.getCategoryDto());
+        when(questionService.getOccupationQuestions("doc@playquiz.io", 2)).thenReturn(List.of(
+                QuestionFixture.getNoAnswerQuestion(10L, "Heart"), QuestionFixture.getNoAnswerQuestion(11L, "Lungs")));
+        // 10 is in both lists: it is asked once, and general knowledge fills the rest.
+        when(questionService.getGeneralKnowledgeQuestions(4)).thenReturn(List.of(
+                QuestionFixture.getNoAnswerQuestion(10L, "Heart"), QuestionFixture.getNoAnswerQuestion(1L, "Life"),
+                QuestionFixture.getNoAnswerQuestion(2L, "Sky"), QuestionFixture.getNoAnswerQuestion(3L, "Sea")));
+        when(questionService.getQuestionWithAnswerOptions(any(), any())).thenReturn(QuestionFixture.getQuestionDto());
+
+        QuizDto result = quizService.getExpressQuiz("doc@playquiz.io");
+
+        assertEquals(Set.of(10L, 11L, 1L, 2L), result.getQuestionIds());
     }
 
     @Test

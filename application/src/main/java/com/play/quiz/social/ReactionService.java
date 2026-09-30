@@ -12,10 +12,12 @@ import java.util.stream.Collectors;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Reactions on news lines: one of each kind per player per line, pressed again to take back. */
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class ReactionService {
@@ -61,13 +63,19 @@ public class ReactionService {
         }
         Long me = currentAccountId();
         reactionRepository.findByAccountIdAndItemKeyAndKind(me, key, kind).ifPresentOrElse(
-                reactionRepository::delete,
-                () -> reactionRepository.save(Reaction.builder()
-                        .accountId(me)
-                        .itemKey(key)
-                        .kind(kind)
-                        .createdDate(LocalDateTime.now())
-                        .build()));
+                reaction -> {
+                    reactionRepository.delete(reaction);
+                    log.info("Account {} took back {} on {}", me, kind, key);
+                },
+                () -> {
+                    reactionRepository.save(Reaction.builder()
+                            .accountId(me)
+                            .itemKey(key)
+                            .kind(kind)
+                            .createdDate(LocalDateTime.now())
+                            .build());
+                    log.info("Account {} reacted {} on {}", me, kind, key);
+                });
         reactionRepository.flush();
         return tallies(List.of(key)).get(key);
     }

@@ -114,7 +114,8 @@ public class ChallengeService {
                     .createdDate(LocalDateTime.now())
                     .build()));
         }
-        log.info("Account {} challenged {} to quiz {}", me.getAccountId(), friendIds, quizId);
+        log.info("Account {} challenged {} to quiz {}: {} sent, the rest already challenged",
+                me.getAccountId(), friendIds, quizId, sent.stream().map(Challenge::getOpponentId).toList());
         return views(sent);
     }
 

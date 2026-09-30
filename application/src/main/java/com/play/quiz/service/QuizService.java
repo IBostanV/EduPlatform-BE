@@ -12,7 +12,8 @@ public interface QuizService {
 
     QuizDto getById(final Long quizId);
 
-    QuizDto getExpressQuiz();
+    /** Up to half from the player's occupations when signed in (email), the rest general knowledge. */
+    QuizDto getExpressQuiz(String email);
 
     QuizDto getQuizByCategoryAndParams(Long catId, UserQuizParams userQuizParams);
 

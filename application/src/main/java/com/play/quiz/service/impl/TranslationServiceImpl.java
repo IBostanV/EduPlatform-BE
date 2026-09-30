@@ -27,6 +27,11 @@ public class TranslationServiceImpl implements TranslationService {
     @Override
     @SuppressWarnings("unchecked")
     public Map<String, String> translate(String langCode) {
+        // The code names a column (EN, RU, ...) and goes into the SQL as text, so nothing but a
+        // two-letter code may get that far: the URL it comes from is open to anyone.
+        if (langCode == null || !langCode.matches("[A-Za-z]{2}")) {
+            throw new IllegalArgumentException("Unknown language code");
+        }
         String queryString = "SELECT trsl.*, trsl.%s as value FROM Q_TRANSLATION trsl ".formatted(langCode);
 
         Query nativeQuery = entityManager.createNativeQuery(queryString, Translation.class);

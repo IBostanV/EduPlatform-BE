@@ -31,13 +31,14 @@ public class Presence {
 
     @EventListener
     public void connected(final SessionConnectedEvent event) {
-        name(event.getUser()).ifPresent(email -> sessions.merge(email, 1, Integer::sum));
+        name(event.getUser()).ifPresent(email ->
+                log.debug("Socket connected for {}: {} session(s)", email, sessions.merge(email, 1, Integer::sum)));
     }
 
     @EventListener
     public void disconnected(final SessionDisconnectEvent event) {
-        name(event.getUser()).ifPresent(email ->
-                sessions.computeIfPresent(email, (key, count) -> count > 1 ? count - 1 : null));
+        name(event.getUser()).ifPresent(email -> log.debug("Socket disconnected for {}: {} session(s) left", email,
+                Optional.ofNullable(sessions.computeIfPresent(email, (key, count) -> count > 1 ? count - 1 : null)).orElse(0)));
     }
 
     public boolean isOnline(final String email) {

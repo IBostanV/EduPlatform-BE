@@ -85,6 +85,8 @@ public class UserGroupServiceImpl implements UserGroupService {
                 .groupId(groupId)
                 .participant(account)
                 .build()));
+        log.info("Created message group id: {} with {} participants ({} other requested)",
+                groupId, participants.size(), ids.size());
 
         return groupId;
     }
@@ -102,7 +104,7 @@ public class UserGroupServiceImpl implements UserGroupService {
             throw new AccessDeniedException("Only members can delete group " + groupId);
         }
 
-        log.info("{} deletes message group {}", username, groupId);
+        log.info("Deleting message group {}", groupId);
         messageRepository.deleteByDestinationGroupId(groupId);
         userGroupRepository.deleteByGroupId(groupId);
         messageGroupRepository.deleteById(groupId);
@@ -125,6 +127,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         if (userGroupRepository.setMuted(groupId, username, muted) == 0) {
             throw new AccessDeniedException("Only members can mute group " + groupId);
         }
+        log.info("Message group {} muted: {}", groupId, muted);
     }
 
     /**
@@ -150,6 +153,7 @@ public class UserGroupServiceImpl implements UserGroupService {
                 .photo(given ? readBytes(photo) : null)
                 .photoType(given ? photo.getContentType() : null)
                 .build());
+        log.info("Message group {} picture {}", groupId, given ? "set" : "cleared");
     }
 
     private static byte[] readBytes(final MultipartFile photo) {

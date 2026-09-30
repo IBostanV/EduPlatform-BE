@@ -63,6 +63,8 @@ public class DailyTaskService {
     /** Pays a task once. The claim is the conditional insert: whoever writes the row pays. */
     private boolean pay(final DailyTask task, final Long accountId, final LocalDate today) {
         if (claimRepository.claim(accountId, task.name(), today, task.getExperience()) != 1) {
+            // Another request wrote the claim first and paid it.
+            log.debug("Account {} daily task {} already claimed for {}", accountId, task, today);
             return false;
         }
         userService.addExperience(accountId, task.getExperience());
