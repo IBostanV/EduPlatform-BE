@@ -6,12 +6,20 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.play.quiz.controller.RestEndpoint;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.converter.DefaultContentTypeResolver;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.converter.MessageConverter;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -26,6 +34,7 @@ import static com.play.quiz.controller.RestEndpoint.WS_BROKER_PARTY;
 import static com.play.quiz.controller.RestEndpoint.WS_BROKER_LIVE;
 import static com.play.quiz.controller.RestEndpoint.WS_BROKER_SOLO;
 
+@Log4j2
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSocketMessageBroker
@@ -39,6 +48,25 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(final MessageBrokerRegistry messageBrokerRegistry) {
         messageBrokerRegistry.setApplicationDestinationPrefixes(RestEndpoint.CONTEXT_PATH + "/app");
         messageBrokerRegistry.enableSimpleBroker(WS_BROKER_PARTY, WS_BROKER_SOLO, WS_BROKER_LIVE);
+    }
+
+    // Clients may only send to the application (@MessageMapping, under /api/app); the broker's
+    // topics are the server's to send on. Otherwise anyone could SEND straight to /party/... and
+    // reach every player, a fake announcement included.
+    @Override
+    public void configureClientInboundChannel(final ChannelRegistration registration) {
+        String applicationPrefix = RestEndpoint.CONTEXT_PATH + "/app/";
+        registration.interceptors(new ChannelInterceptor() {
+            @Override
+            public Message<?> preSend(final Message<?> message, final MessageChannel channel) {
+                StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                if (accessor == null || accessor.getCommand() != StompCommand.SEND) return message;
+                String destination = accessor.getDestination();
+                if (destination != null && destination.startsWith(applicationPrefix)) return message;
+                log.warn("Dropped a client SEND to {}", destination);
+                return null;
+            }
+        });
     }
 
     @Override

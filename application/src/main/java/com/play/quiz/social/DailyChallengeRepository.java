@@ -10,6 +10,15 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DailyChallengeRepository extends JpaRepository<DailyChallenge, LocalDate> {
 
+    /** The first day there was a daily challenge: puzzle #1. */
+    @Query("SELECT MIN(d.day) FROM DailyChallenge d")
+    LocalDate findFirstDay();
+
+    /** The days whose challenge this player has played, newest first: their puzzle streak. */
+    @Query("SELECT d.day FROM DailyChallenge d WHERE EXISTS (SELECT 1 FROM UserQuizHistory h"
+            + " WHERE h.quiz.quizId = d.quizId AND h.account.accountId = :accountId) ORDER BY d.day DESC")
+    java.util.List<LocalDate> findPlayedDays(Long accountId);
+
     /**
      * Sets the day's quiz unless somebody already has, returning 1 to whoever got there first.
      *
@@ -20,7 +29,7 @@ public interface DailyChallengeRepository extends JpaRepository<DailyChallenge, 
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_DAILY_CHALLENGE (CHALLENGE_DAY, QUIZ_ID)
-            SELECT :day, :quizId FROM dual
+            SELECT :day, :quizId
             WHERE NOT EXISTS (SELECT 1 FROM Q_DAILY_CHALLENGE WHERE CHALLENGE_DAY = :day)
             """)
     int claimDay(LocalDate day, Long quizId);

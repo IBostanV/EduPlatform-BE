@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 
 class ChallengeOutcomeTest {
 
-    private static final UserSummary ANA = new UserSummary(1L, "Ana", null);
-    private static final UserSummary BOB = new UserSummary(2L, "Bob", null);
+    private static final UserSummary ANA = new UserSummary(1L, "Ana", null, null, null);
+    private static final UserSummary BOB = new UserSummary(2L, "Bob", null, null, null);
 
     private static ChallengeView challenge(final Score mine, final Score theirs) {
         return new ChallengeView(9L, 3L, "Capitals", ANA, BOB, mine, theirs, LocalDateTime.now());

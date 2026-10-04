@@ -8,14 +8,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.play.quiz.domain.Question;
 import com.play.quiz.domain.Quiz;
 import com.play.quiz.domain.UserQuizHistory;
@@ -30,8 +29,10 @@ import com.play.quiz.record.PageResponse;
 import com.play.quiz.record.QuizHistoryEntry;
 import com.play.quiz.record.QuizStatistics;
 import com.play.quiz.repository.UserQuizHistoryRepository;
+import com.play.quiz.review.ReviewService;
 import com.play.quiz.repository.QuizRepository;
 import com.play.quiz.repository.QuizTypeRepository;
+import com.play.quiz.repository.translation.AnswerTranslationRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.CustomQuizService;
 import com.play.quiz.service.GlossaryService;
@@ -44,6 +45,7 @@ import com.play.quiz.util.ExperiencePayout;
 import com.play.quiz.util.Numbers;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -69,6 +71,8 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
     private final QuizTypeRepository quizTypeRepository;
     private final CustomQuizService customQuizService;
     private final ConquestAttemptRepository conquestAttemptRepository;
+    private final AnswerTranslationRepository answerTranslationRepository;
+    private final ReviewService reviewService;
 
     @Override
     // One persistence context for the load and the save: the quiz would be detached otherwise,
@@ -105,8 +109,19 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
             history.setRightAnswers((int) right);
             history.setTotalAnswers(answers.size());
             userQuizHistoryRepository.save(history);
+            reviewMistakes(history, answers);
         } catch (RuntimeException exception) {
             log.warn("History {} could not be marked: {}", history.getHistoryId(), exception.getMessage(), exception);
+        }
+    }
+
+    // The mistakes deck is a help, not the record: a deck that cannot be written is logged and
+    // leaves the run's score as it is.
+    private void reviewMistakes(final UserQuizHistory history, final List<HistoryAnswer> answers) {
+        try {
+            reviewService.record(history.getAccount().getAccountId(), answers);
+        } catch (RuntimeException exception) {
+            log.warn("History {} could not update the mistakes deck: {}", history.getHistoryId(), exception.getMessage(), exception);
         }
     }
 
@@ -218,25 +233,29 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
     @NonNull
     @Override
     @Transactional
+    @SneakyThrows
     public UserQuizHistoryDto getById(final Long historyId) {
         log.debug("Get UserHistory with historyId: {}", historyId);
         // A custom quiz's questions live in their own tables and are judged there.
         UserQuizHistory history = userQuizHistoryRepository.getReferenceById(historyId);
         if (history.getQuiz().isCustom()) {
             UserQuizHistoryDto customHistory = userQuizHistoryMapper.toDto(history);
-            customHistory.getAnswers().addAll(customQuizService.score(history.getQuiz(),
-                    JsonParser.parseString(history.getAnswersJson()).getAsJsonArray()));
+            customHistory.getAnswers().addAll(customQuizService.score(history.getQuiz(), history.getAnswersJson()));
             return customHistory;
         }
 
         UserQuizHistoryDto historyDto = buildUserHistory(historyId);
         historyDto.setCoinsEarned(coinsEarned(history));
-        JsonArray jsonUserAnswers = JsonParser.parseString(historyDto.getAnswersJson()).getAsJsonArray();
+        JsonNode jsonUserAnswers = new ObjectMapper().readTree(historyDto.getAnswersJson());
 
         String quizType = Objects.isNull(historyDto.getQuiz().getQuizType())
                 ? null : historyDto.getQuiz().getQuizType().getName();
         historyDto.getQuiz().getQuestionList().forEach(question ->
-                historyDto.getAnswers().addAll(createUserAnswersFromJson(jsonUserAnswers, question, quizType)));
+                createUserAnswersFromJson(jsonUserAnswers, question, quizType).forEach(answer -> {
+                    answer.setQuestionId(question.getId());
+                    answer.setCategoryId(question.getCategoryId());
+                    historyDto.getAnswers().add(answer);
+                }));
 
         return historyDto;
     }
@@ -249,7 +268,7 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
         return userQuizHistoryMapper.toDto(userQuizHistory.toBuilder().quiz(quiz).build());
     }
 
-    private List<HistoryAnswer> createUserAnswersFromJson(final JsonArray userAnswers, final QuestionDto question,
+    private List<HistoryAnswer> createUserAnswersFromJson(final JsonNode userAnswers, final QuestionDto question,
                                                           final String quizType) {
         if (!userAnswers.isEmpty()) {
             List<HistoryAnswer> singleAnswerAsList = getAnswers(userAnswers, question, quizType);
@@ -260,15 +279,14 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
                 0, question.getContent(), null, getFirstAnswer(question).getContent()));
     }
 
-    private List<HistoryAnswer> getAnswers(JsonArray userAnswers, QuestionDto question, String quizType) {
-        for (JsonElement userAnswer : userAnswers) {
-            final Set<String> questionIds = userAnswer.getAsJsonObject().keySet();
-            final Function<Map.Entry<String, JsonElement>, HistoryAnswer> createAnswer =
-                    keyValue -> createHistoryAnswer(keyValue.getValue().getAsJsonObject(), question, quizType);
+    private List<HistoryAnswer> getAnswers(JsonNode userAnswers, QuestionDto question, String quizType) {
+        for (JsonNode userAnswer : userAnswers) {
+            final Function<Map.Entry<String, JsonNode>, HistoryAnswer> createAnswer =
+                    keyValue -> createHistoryAnswer(keyValue.getValue(), question, quizType);
 
-            if (questionIds.contains(question.getId().toString())) {
+            if (userAnswer.has(question.getId().toString())) {
                 log.debug("User answered the question: {}", question.getId());
-                return userAnswer.getAsJsonObject().entrySet()
+                return userAnswer.properties()
                         .stream().map(createAnswer).toList();
             }
         }
@@ -280,24 +298,29 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
     /**
      * One answer marked. What was sent says how it was played: a termId picked (single choice, one
      * from two, drag and drop, map), several termIds (multiple choice, or in order for that quiz
-     * type), typed text (input) or a {from, to} range (values range; an open end is null).
+     * type), typed text (input), a {from, to} range (values range; an open end is null) or a
+     * {termId: value} object (drag and drop pairs).
      */
-    private HistoryAnswer createHistoryAnswer(final JsonObject keyValue, final QuestionDto question,
+    private HistoryAnswer createHistoryAnswer(final JsonNode keyValue, final QuestionDto question,
                                               final String quizType) {
         AnswerDto answer = getFirstAnswer(question);
-        JsonElement picked = getJsonElementValue(keyValue, "answer");
-        double time = getJsonElementValue(keyValue, "time").getAsDouble();
+        JsonNode picked = Objects.requireNonNull(keyValue.get("answer"));
+        double time = Objects.requireNonNull(keyValue.get("time")).asDouble();
 
-        if (picked.isJsonArray()) {
-            List<Long> termIds = picked.getAsJsonArray().asList().stream().map(JsonElement::getAsLong).toList();
+        if ("DRAG_AND_DROP".equals(quizType) && picked.isObject()) {
+            return pairsAnswer(time, question, picked);
+        }
+
+        if (picked.isArray()) {
+            List<Long> termIds = picked.valueStream().map(JsonNode::asLong).toList();
             return "IN_ORDER".equals(quizType)
                     ? orderedAnswer(time, question, termIds)
                     : multipleAnswer(time, question, termIds);
         }
-        if (picked.isJsonObject()) return rangeAnswer(time, question, answer, picked.getAsJsonObject());
-        if (picked.getAsJsonPrimitive().isString()) return typedAnswer(time, question, answer, picked.getAsString());
+        if (picked.isObject()) return rangeAnswer(time, question, answer, picked);
+        if (picked.isTextual()) return typedAnswer(time, question, picked.asText());
 
-        Long glossaryId = picked.getAsLong();
+        Long glossaryId = picked.asLong();
 
         if (Objects.equals(answer.getTermId(), glossaryId)) {
             log.debug("User answered right. Glossary id: {}", glossaryId);
@@ -309,11 +332,18 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
         return new HistoryAnswer(time, question.getContent(), glossaryDto.getValue(), answer.getContent());
     }
 
-    // ponytail: only the answer's own content is accepted, not its translations; load those if
-    // players type in their own language.
-    private static HistoryAnswer typedAnswer(double time, QuestionDto question, AnswerDto answer, String typed) {
-        boolean right = normalize(typed).equals(normalize(answer.getContent()));
-        return new HistoryAnswer(time, question.getContent(), typed, right ? null : answer.getContent());
+    /**
+     * Right when it is any of the question's answers, as written or in one of their translations
+     * (a player types in their own language). The translations are only looked up on a miss.
+     */
+    private HistoryAnswer typedAnswer(double time, QuestionDto question, String typed) {
+        String wanted = normalize(typed);
+        boolean right = question.getAnswers().stream().anyMatch(answer -> wanted.equals(normalize(answer.getContent())))
+                || answerTranslationRepository.findAllByAnswer_AnsIdIn(question.getAnswers().stream()
+                        .map(AnswerDto::getId).filter(Objects::nonNull).toList()).stream()
+                .anyMatch(translation -> wanted.equals(normalize(translation.getDescription())));
+        return new HistoryAnswer(time, question.getContent(), typed,
+                right ? null : getFirstAnswer(question).getContent());
     }
 
     private static String normalize(final String text) {
@@ -332,6 +362,21 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
                 right.equals(new HashSet<>(termIds)) ? null : expected);
     }
 
+    /** Right when every key got its own value. */
+    private static HistoryAnswer pairsAnswer(double time, QuestionDto question, JsonNode pairs) {
+        Function<AnswerDto, String> placed = answer -> Optional.ofNullable(pairs.get(String.valueOf(answer.getTermId())))
+                .filter(node -> node.isValueNode() && !node.isNull()).map(JsonNode::asText).orElse(null);
+        boolean right = question.getAnswers().stream()
+                .allMatch(answer -> normalize(answer.getContent()).equals(normalize(placed.apply(answer))));
+        String picked = question.getAnswers().stream()
+                .map(answer -> answer.getGlossaryKey() + " → " + Objects.toString(placed.apply(answer), "—"))
+                .collect(Collectors.joining(", "));
+        String expected = question.getAnswers().stream()
+                .map(answer -> answer.getGlossaryKey() + " → " + answer.getContent())
+                .collect(Collectors.joining(", "));
+        return new HistoryAnswer(time, question.getContent(), picked, right ? null : expected);
+    }
+
     /** Right when the things were put in order of their values, smallest first. */
     private HistoryAnswer orderedAnswer(double time, QuestionDto question, List<Long> termIds) {
         List<GlossaryDto> items = termIds.stream().map(glossaryService::getById).toList();
@@ -348,7 +393,7 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
     }
 
     /** Right when the answer's value falls in the range picked: from inclusive, to exclusive. */
-    private static HistoryAnswer rangeAnswer(double time, QuestionDto question, AnswerDto answer, JsonObject range) {
+    private static HistoryAnswer rangeAnswer(double time, QuestionDto question, AnswerDto answer, JsonNode range) {
         Double from = bound(range, "from");
         Double to = bound(range, "to");
         Double value = Numbers.parse(answer.getContent());
@@ -361,17 +406,9 @@ public class UserQuizHistoryServiceImpl implements UserQuizHistoryService {
         return new HistoryAnswer(time, question.getContent(), picked, right ? null : answer.getContent());
     }
 
-    private static Double bound(final JsonObject range, final String name) {
-        JsonElement bound = range.get(name);
-        return Objects.isNull(bound) || bound.isJsonNull() ? null : bound.getAsDouble();
-    }
-
-    private static JsonElement getJsonElementValue(final JsonObject keyValue, String key) {
-        return Objects.requireNonNull(keyValue.entrySet().stream()
-                .filter(entry -> Objects.equals(entry.getKey(), key))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElse(null));
+    private static Double bound(final JsonNode range, final String name) {
+        JsonNode bound = range.get(name);
+        return Objects.isNull(bound) || bound.isNull() ? null : bound.asDouble();
     }
 
     private static AnswerDto getFirstAnswer(final QuestionDto question) {

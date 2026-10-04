@@ -1,7 +1,0 @@
--- // create_reaction_sequence
-CREATE SEQUENCE REACTION_SEQ START WITH 1 INCREMENT BY 1 NOCACHE
-/execute/
-
--- //@UNDO
-DROP SEQUENCE REACTION_SEQ
-/execute/

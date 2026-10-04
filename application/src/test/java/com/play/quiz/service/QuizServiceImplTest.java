@@ -1,6 +1,7 @@
 package com.play.quiz.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -103,7 +104,6 @@ class QuizServiceImplTest {
                 .thenReturn(Property.builder().value("1").build());
         when(propertyRepository.findByName(EXPRESS_QUIZ_DEFAULT_TIME_SECONDS))
                 .thenReturn(Property.builder().value("60").build());
-        when(categoryService.getById(1L, null)).thenReturn(CategoryFixture.getCategoryDto());
         when(questionService.getGeneralKnowledgeQuestions(1))
                 .thenReturn(List.of(QuestionFixture.getNoAnswerQuestion(1L, "Life")));
         when(questionService.getQuestionWithAnswerOptions(1L, null)).thenReturn(QuestionFixture.getQuestionDto());
@@ -114,6 +114,8 @@ class QuizServiceImplTest {
         assertEquals(Set.of(1L), result.getQuestionIds());
         assertEquals(1, result.getQuestionList().size());
         assertEquals(QuestionFixture.getQuestionDto().getAnswers(), result.getQuestionList().getFirst().getAnswers());
+        // General knowledge, not a category: stored under one it would read as that category's run.
+        assertNull(result.getCategory());
     }
 
     @Test
@@ -122,7 +124,6 @@ class QuizServiceImplTest {
                 .thenReturn(Property.builder().value("4").build());
         when(propertyRepository.findByName(EXPRESS_QUIZ_DEFAULT_TIME_SECONDS))
                 .thenReturn(Property.builder().value("60").build());
-        when(categoryService.getById(1L, null)).thenReturn(CategoryFixture.getCategoryDto());
         when(questionService.getOccupationQuestions("doc@playquiz.io", 2)).thenReturn(List.of(
                 QuestionFixture.getNoAnswerQuestion(10L, "Heart"), QuestionFixture.getNoAnswerQuestion(11L, "Lungs")));
         // 10 is in both lists: it is asked once, and general knowledge fills the rest.

@@ -24,6 +24,7 @@ import com.play.quiz.fixtures.UserDetailsFixture;
 import com.play.quiz.mapper.UserQuizHistoryMapperImpl;
 import com.play.quiz.repository.QuizRepository;
 import com.play.quiz.repository.QuizTypeRepository;
+import com.play.quiz.repository.translation.AnswerTranslationRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.impl.UserQuizHistoryServiceImpl;
@@ -48,6 +49,7 @@ class UserQuizHistorySaveTest {
     @Mock private QuizTypeRepository quizTypeRepository;
     @Mock private CustomQuizService customQuizService;
     @Mock private ConquestAttemptRepository conquestAttemptRepository;
+    @Mock private AnswerTranslationRepository answerTranslationRepository;
 
     private UserQuizHistoryService historyService;
 
@@ -55,7 +57,8 @@ class UserQuizHistorySaveTest {
     void init() {
         historyService = new UserQuizHistoryServiceImpl(userService, questionService, glossaryService,
                 new UserQuizHistoryMapperImpl(), authenticationFacade, userQuizHistoryRepository, quizRepository,
-                quizTypeRepository, customQuizService, conquestAttemptRepository);
+                quizTypeRepository, customQuizService, conquestAttemptRepository, answerTranslationRepository,
+                org.mockito.Mockito.mock(com.play.quiz.review.ReviewService.class));
     }
 
     @Test

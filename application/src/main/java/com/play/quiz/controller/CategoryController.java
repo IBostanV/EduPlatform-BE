@@ -1,6 +1,7 @@
 package com.play.quiz.controller;
 
 import com.play.quiz.dto.CategoryDto;
+import com.play.quiz.repository.QuestionRepository;
 import com.play.quiz.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.SneakyThrows;
@@ -33,6 +34,7 @@ import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
 @RequiredArgsConstructor
 public class CategoryController {
     private final CategoryService categoryService;
+    private final QuestionRepository questionRepository;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CategoryDto> getCategory(@RequestParam(required = false) Long id,
@@ -95,6 +97,21 @@ public class CategoryController {
     private static MediaType imageType(final byte[] image) {
         String type = URLConnection.guessContentTypeFromStream(new ByteArrayInputStream(image));
         return type == null ? MediaType.IMAGE_JPEG : MediaType.parseMediaType(type);
+    }
+
+    /**
+     * The categories with at least one question a quiz of this type (its bit value; 0 or none for
+     * any) can ask at this difficulty (the quiz's own complexityFrom/To; none for any). Only their
+     * own questions: a parent with none is still playable through its children, which the page
+     * works out from the tree.
+     */
+    @GetMapping(value = "/with-questions", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<Long>> getCategoryIdsWithQuestions(@RequestParam(required = false) final Long quizType,
+                                                                  @RequestParam(required = false) final Integer complexityFrom,
+                                                                  @RequestParam(required = false) final Integer complexityTo) {
+        // A native query's ids come back as whatever number type the driver picks.
+        return ResponseEntity.ok(questionRepository.findCategoryIdsWithQuestionsFor(quizType, complexityFrom, complexityTo).stream()
+                .map(Number::longValue).toList());
     }
 
     @GetMapping(value = "/all-categories-short", produces = MediaType.APPLICATION_JSON_VALUE)

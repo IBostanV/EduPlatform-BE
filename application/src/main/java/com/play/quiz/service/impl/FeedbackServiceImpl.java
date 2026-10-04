@@ -12,6 +12,7 @@ import com.play.quiz.record.FeedbackInput;
 import com.play.quiz.record.UserSummary;
 import com.play.quiz.repository.FeedbackRepository;
 import com.play.quiz.service.FeedbackService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -58,12 +59,12 @@ public class FeedbackServiceImpl implements FeedbackService {
             return null;
         }
         if (!String.valueOf(screenshot.getContentType()).startsWith("image/")) {
-            throw new IllegalArgumentException("A screenshot has to be an image");
+            throw new IllegalArgumentException(ServerText.t("err_screenshot_not_image", "A screenshot has to be an image"));
         }
         try {
             return screenshot.getBytes();
         } catch (IOException exception) {
-            throw new IllegalArgumentException("Could not read the screenshot", exception);
+            throw new IllegalArgumentException(ServerText.t("err_screenshot_unreadable", "Could not read the screenshot"), exception);
         }
     }
 

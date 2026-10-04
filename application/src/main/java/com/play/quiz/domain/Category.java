@@ -11,7 +11,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
@@ -39,7 +38,6 @@ public class Category extends BaseEntity {
     private String name;
     private String naturalId;
     private Boolean visible;
-    @Lob
     private byte[] attachment;
 
     @Setter

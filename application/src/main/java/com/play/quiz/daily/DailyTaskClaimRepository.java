@@ -15,6 +15,9 @@ public interface DailyTaskClaimRepository extends JpaRepository<DailyTaskClaim, 
     @Query("SELECT c.taskCode FROM DailyTaskClaim c WHERE c.accountId = :accountId AND c.taskDay = :day")
     List<String> findClaimedCodes(Long accountId, LocalDate day);
 
+    /** How many daily tasks this player finished between two days, both included: season points. */
+    long countByAccountIdAndTaskDayBetween(Long accountId, LocalDate from, LocalDate to);
+
     /**
      * The days on which this player was paid for every one of that day's tasks — a clean sweep,
      * which is a trophy. One row per such day, counted by the caller.
@@ -34,7 +37,7 @@ public interface DailyTaskClaimRepository extends JpaRepository<DailyTaskClaim, 
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_DAILY_TASK (TASK_ID, ACCOUNT_ID, TASK_CODE, TASK_DAY, EXPERIENCE, CREATED_BY, CREATED_DATE)
-            SELECT daily_task_seq.NEXTVAL, :accountId, :code, :day, :experience, :accountId, SYSDATE FROM dual
+            SELECT nextval('daily_task_seq'), :accountId, :code, :day, :experience, :accountId, LOCALTIMESTAMP
             WHERE NOT EXISTS (SELECT 1 FROM Q_DAILY_TASK
                 WHERE ACCOUNT_ID = :accountId AND TASK_CODE = :code AND TASK_DAY = :day)
             """)

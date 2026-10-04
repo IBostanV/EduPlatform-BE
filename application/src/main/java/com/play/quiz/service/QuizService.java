@@ -25,4 +25,7 @@ public interface QuizService {
 
     /** Stores a quiz of general-knowledge questions nobody has played yet, for replays; its id. */
     Long storeGeneralKnowledgeQuiz(int questionCount);
+
+    /** Stores a quiz of exactly these questions, with no category, and returns its id. */
+    Long storeQuestionsQuiz(java.util.Set<Long> questionIds);
 }

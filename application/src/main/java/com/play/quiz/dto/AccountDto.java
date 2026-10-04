@@ -12,6 +12,7 @@ import com.play.quiz.trophy.TrophyCatalog;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import com.play.quiz.enums.ProfileVisibility;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,6 +46,22 @@ public class AccountDto {
     private int coins;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private int streakFreezes;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private boolean tourSeen;
+    // Changed through its own endpoint, not the profile form.
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private ProfileVisibility profileVisibility;
+    // What they wear, changed in the shop rather than on the profile form.
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String equippedFrame;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String equippedNameColor;
+
+    /** The colour their name is drawn in, ready to use; null for the usual one. */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public String getNameColor() {
+        return com.play.quiz.cosmetic.Cosmetic.colorOf(equippedNameColor);
+    }
     private String preferredTrophy;
     /** The chosen trophy as it is drawn, so the bar needs no second request to show it. */
     private TrophyCatalog.TrophyFace trophy;

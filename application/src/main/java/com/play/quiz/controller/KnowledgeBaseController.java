@@ -51,6 +51,13 @@ public class KnowledgeBaseController {
         return ResponseEntity.ok(knowledgeBaseService.getPublishedRecords(categoryId, query));
     }
 
+    // The result page's "learn why": the best article for each category a run got wrong.
+    @GetMapping(value = "/records/for-categories", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<java.util.Map<Long, KnowledgeBaseService.ArticleLink>> bestArticles(
+            @RequestParam final java.util.List<Long> ids) {
+        return ResponseEntity.ok(knowledgeBaseService.bestArticles(ids.stream().distinct().limit(50).toList()));
+    }
+
     // Home page "Did you know": today's record, or 204 when nothing is published.
     @GetMapping(value = "/records/daily", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<KnowledgeBaseRecordDto> getDailyRecord() {

@@ -12,5 +12,7 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
 
     List<NewsPost> findByPatchTrueAndCreatedDateAfter(LocalDateTime since);
 
+    List<NewsPost> findByCreatedByOrderByCreatedDateDesc(Long createdBy, org.springframework.data.domain.Pageable pageable);
+
     List<NewsPost> findByPatchFalseAndCreatedByInAndCreatedDateAfter(Collection<Long> authors, LocalDateTime since);
 }

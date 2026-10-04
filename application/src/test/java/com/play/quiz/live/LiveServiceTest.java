@@ -12,8 +12,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.play.quiz.domain.Account;
 import com.play.quiz.dto.AnswerDto;
@@ -142,5 +147,177 @@ class LiveServiceTest {
         assertEquals(0, second.score());
         assertFalse(second.lastCorrect());
         assertEquals(RIGHT, revealed.reveal().answerId());
+    }
+
+    @Test
+    void given_a_deal_then_every_face_is_on_the_table_exactly_twice() {
+        int[] deck = LiveService.deal(8, new Random(7));
+        assertEquals(16, deck.length);
+        Map<Integer, Long> counts = Arrays.stream(deck).boxed()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        assertEquals(8, counts.size());
+        assertTrue(counts.values().stream().allMatch(count -> count == 2));
+        assertTrue(Arrays.stream(deck).allMatch(face -> face >= 0 && face < LiveService.FACES));
+    }
+
+    @Test
+    void given_pairs_then_a_pair_scores_and_goes_again_and_a_miss_passes_the_turn() throws Exception {
+        current = host;
+        String code = live.create(new CreateInput(LiveRoom.Mode.PAIRS, Set.of(2L), null, 6, 10)).code();
+        current = friend;
+        live.join(code);
+        current = host;
+        live.start(code);
+
+        long deadline = System.currentTimeMillis() + 6000;
+        while (!"TURN".equals(live.get(code).phase()) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        RoomView room = live.get(code);
+        assertEquals("TURN", room.phase());
+        // Face down: no face reaches the browser before the card is turned.
+        assertTrue(room.pairs().cards().stream().allMatch(card -> card == null));
+
+        Account player = room.pairs().turn().equals(1L) ? host : friend;
+        Account other = player == host ? friend : host;
+        int[] faces = live.room(code).faces;
+        int pairOf0 = 1;
+        while (faces[pairOf0] != faces[0]) pairOf0++;
+        int notPairOf0 = faces[1] == faces[0] ? 2 : 1;
+
+        // Out of turn: nothing happens.
+        current = other;
+        assertTrue(live.flip(code, 0).pairs().turned().isEmpty());
+
+        current = player;
+        live.flip(code, 0);
+        RoomView took = live.flip(code, pairOf0);
+        assertEquals(player.getAccountId(), took.pairs().takenBy().get(0));
+        assertEquals(faces[0], took.pairs().cards().get(pairOf0));
+        assertEquals(player.getAccountId(), took.pairs().turn());
+        assertEquals(1, took.players().get(0).score());
+
+        // A taken card cannot be turned again.
+        assertTrue(live.flip(code, 0).pairs().turned().isEmpty());
+
+        int missFirst = notPairOf0 == 1 ? 2 : 1;
+        while (missFirst == pairOf0 || faces[missFirst] == faces[notPairOf0]) missFirst++;
+        live.flip(code, missFirst);
+        RoomView missed = live.flip(code, notPairOf0);
+        assertEquals("MISMATCH", missed.phase());
+
+        deadline = System.currentTimeMillis() + 4000;
+        while (!other.getAccountId().equals(live.get(code).pairs().turn()) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        RoomView passed = live.get(code);
+        assertEquals("TURN", passed.phase());
+        assertEquals(other.getAccountId(), passed.pairs().turn());
+        assertEquals(null, passed.pairs().cards().get(notPairOf0));
+    }
+
+    @Test
+    void given_pairs_played_to_the_end_then_the_winner_is_paid() throws Exception {
+        current = host;
+        String code = live.create(new CreateInput(LiveRoom.Mode.PAIRS, Set.of(2L), null, 6, 10)).code();
+        current = friend;
+        live.join(code);
+        current = host;
+        live.start(code);
+        long deadline = System.currentTimeMillis() + 6000;
+        while (!"TURN".equals(live.get(code).phase()) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+
+        // Whoever starts takes every pair: a pair always earns another go.
+        current = live.get(code).pairs().turn().equals(1L) ? host : friend;
+        int[] faces = live.room(code).faces;
+        RoomView room = null;
+        for (int first = 0; first < faces.length; first++) {
+            for (int second = first + 1; second < faces.length; second++) {
+                if (faces[first] == faces[second]) {
+                    live.flip(code, first);
+                    room = live.flip(code, second);
+                }
+            }
+        }
+
+        assertEquals("FINISHED", room.phase());
+        verify(accountRepository).addCoins(current.getAccountId(), com.play.quiz.coin.Coins.PAIRS_WIN);
+        assertEquals(com.play.quiz.coin.Coins.PAIRS_WIN, room.players().get(0).coins());
+        assertEquals(0, room.players().get(1).coins());
+
+        // Play again: the friend reopens the room, the host is invited back and stays host.
+        current = friend;
+        RoomView lobby = live.again(code);
+        assertEquals("LOBBY", lobby.phase());
+        assertEquals(1, lobby.players().size());
+        assertEquals(1L, lobby.hostId());
+        verify(messaging).convertAndSendToUser(eq("host@quiz"), eq("/live"),
+                argThat((LiveService.LiveEvent event) -> "INVITE".equals(event.type()) && code.equals(event.code())));
+
+        current = host;
+        RoomView back = live.again(code);
+        assertEquals(2, back.players().size());
+        assertTrue(back.players().stream().allMatch(player -> player.score() == 0 && player.coins() == 0));
+        assertEquals("COUNTDOWN", live.start(code).phase());
+
+        // The rematch is the second game today between the two: its winner gets half.
+        deadline = System.currentTimeMillis() + 6000;
+        while (!"TURN".equals(live.get(code).phase()) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        current = live.get(code).pairs().turn().equals(1L) ? host : friend;
+        faces = live.room(code).faces;
+        for (int first = 0; first < faces.length; first++) {
+            for (int second = first + 1; second < faces.length; second++) {
+                if (faces[first] == faces[second]) {
+                    live.flip(code, first);
+                    room = live.flip(code, second);
+                }
+            }
+        }
+        assertEquals("FINISHED", room.phase());
+        verify(accountRepository).addCoins(current.getAccountId(), com.play.quiz.coin.Coins.pairsWin(2));
+        assertEquals(com.play.quiz.coin.Coins.pairsWin(2), room.players().get(0).coins());
+    }
+
+    @Test
+    void given_a_player_left_the_results_then_a_rematch_does_not_invite_them() throws Exception {
+        current = host;
+        String code = live.create(new CreateInput(LiveRoom.Mode.PAIRS, Set.of(2L), null, 4, 10)).code();
+        current = friend;
+        live.join(code);
+        current = host;
+        live.start(code);
+        assertEquals("FINISHED", playToTheEnd(code).phase());
+
+        current = friend;
+        live.leave(code);
+        current = host;
+        RoomView lobby = live.again(code);
+
+        assertEquals("LOBBY", lobby.phase());
+        assertTrue(lobby.invited().isEmpty());
+    }
+
+    /** Whoever has the first turn takes every pair, the room's own deal read straight from it. */
+    private RoomView playToTheEnd(final String code) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 6000;
+        while (!"TURN".equals(live.get(code).phase()) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        current = live.get(code).pairs().turn().equals(1L) ? host : friend;
+        int[] faces = live.room(code).faces;
+        RoomView room = null;
+        for (int first = 0; first < faces.length; first++) {
+            for (int second = first + 1; second < faces.length; second++) {
+                if (faces[first] == faces[second]) {
+                    live.flip(code, first);
+                    room = live.flip(code, second);
+                }
+            }
+        }
+        return room;
     }
 }

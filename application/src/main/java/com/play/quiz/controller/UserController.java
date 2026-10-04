@@ -13,6 +13,8 @@ import com.play.quiz.record.UserSummary;
 import com.play.quiz.record.MuteInput;
 import com.play.quiz.record.PasswordInput;
 import com.play.quiz.record.PublicProfile;
+import com.play.quiz.enums.ProfileVisibility;
+import com.play.quiz.profile.ProfileActivityService;
 import com.play.quiz.service.UserGroupService;
 import com.play.quiz.service.UserOccupationService;
 import com.play.quiz.service.UserService;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,12 +51,16 @@ public class UserController {
     private final UserOccupationService userOccupationService;
     private final TrophyCatalog trophyCatalog;
     private final IqService iqService;
+    private final ProfileActivityService profileActivityService;
+
+    public record VisibilityInput(ProfileVisibility visibility) {}
 
     // Reading the signed-in player is also what marks the day as visited: it is asked for on
-    // every page, which is what "visited today" means.
+    // every page, which is what "visited today" means. The day is the player's own (PlayerZone).
     @GetMapping(value = "/get-current-user", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AccountDto> getUser(Principal principal) {
-        Account account = userService.recordVisit(principal.getName());
+    public ResponseEntity<AccountDto> getUser(Principal principal,
+                                              @RequestHeader(value = PlayerZone.HEADER, required = false) String timeZone) {
+        Account account = userService.recordVisit(principal.getName(), PlayerZone.of(timeZone));
         AccountDto dto = accountMapper.toDto(account);
         dto.setTrophy(trophyCatalog.faceOf(account.getPreferredTrophy()).orElse(null));
 
@@ -67,6 +74,18 @@ public class UserController {
         return ResponseEntity.ok(PublicProfile.of(account,
                 trophyCatalog.faceOf(account.getPreferredTrophy()).orElse(null),
                 iqService.latest(accountId).orElse(null)));
+    }
+
+    // What the player has been doing, if they let the reader see it (ProfileActivityService).
+    @GetMapping(value = "/{accountId}/activity", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ProfileActivityService.ProfileActivity> getActivity(@PathVariable final Long accountId) {
+        return ResponseEntity.ok(profileActivityService.activity(accountId));
+    }
+
+    @PutMapping(value = "/profile-visibility", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> setProfileVisibility(@RequestBody final VisibilityInput input) {
+        userService.setProfileVisibility(input.visibility());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -167,6 +186,12 @@ public class UserController {
     @PostMapping(value = "/change-password", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void changePassword(@RequestBody PasswordInput password) {
         userService.changePassword(password);
+    }
+
+    @PostMapping("/tour-seen")
+    public ResponseEntity<Void> markTourSeen() {
+        userService.markTourSeen();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/change-language")

@@ -14,7 +14,7 @@ public interface LevelUpRepository extends JpaRepository<LevelUp, Long> {
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_LEVEL_UP (LEVEL_UP_ID, ACCOUNT_ID, LEVEL_NO, REACHED_DATE)
-            VALUES (level_up_seq.NEXTVAL, :accountId, :level, SYSDATE)
+            VALUES (nextval('level_up_seq'), :accountId, :level, LOCALTIMESTAMP)
             """)
     void record(Long accountId, int level);
 

@@ -11,6 +11,7 @@ import com.play.quiz.repository.AccountRepository;
 import com.play.quiz.repository.UserGroupRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class GroupLeaderboardService {
     @Transactional(readOnly = true)
     public List<Row> leaderboard(final Long groupId, final Period period) {
         if (!userGroupRepository.isMember(groupId, authenticationFacade.getPrincipal().getUsername())) {
-            throw new IllegalArgumentException("You are not in that group");
+            throw new IllegalArgumentException(ServerText.t("err_not_in_group", "You are not in that group"));
         }
         LocalDateTime to = LocalDateTime.now();
         LocalDateTime from = to.minusDays(period.days);

@@ -20,12 +20,10 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.Date;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +35,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.math.BigDecimal.ONE;
 import static java.util.stream.Collectors.groupingBy;
 
 @Log4j2
@@ -154,10 +151,10 @@ public class UserRepositoryImpl implements UserRepository {
         propertyMap.put(EMAIL, account.getEmail());
         propertyMap.put("avatar", account.getAvatar());
         propertyMap.put("isEnabled", account.isEnabled());
-        propertyMap.put("name", mapNull().apply(account.getName()));
-        propertyMap.put("surname", mapNull().apply(account.getSurname()));
-        propertyMap.put("birthday", mapNull().apply(account.getBirthday()));
-        propertyMap.put("username", mapNull().apply(account.getUsername()));
+        propertyMap.put("name", account.getName());
+        propertyMap.put("surname", account.getSurname());
+        propertyMap.put("birthday", account.getBirthday());
+        propertyMap.put("username", account.getUsername());
         propertyMap.put("createdDate", account.getCreatedDate());
         propertyMap.put("updatedDate", account.getUpdatedDate());
 
@@ -176,10 +173,6 @@ public class UserRepositoryImpl implements UserRepository {
         propertyMap.put("password", Objects.nonNull(account.getPassword())
                 ? String.copyValueOf(account.getPassword()) : null);
         return propertyMap;
-    }
-
-    private Function<Object, Object> mapNull() {
-        return input -> Objects.nonNull(input) ? input : "";
     }
 
     @Override
@@ -224,7 +217,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     private static Role mapRole(final Map<String, Object> item) {
         return Role.builder()
-                .roleId(((BigDecimal) item.get("ROLE_ID")).longValue())
+                .roleId(((Number) item.get("ROLE_ID")).longValue())
                 .name(UserRole.valueOf((String) item.get("NAME")))
                 .build();
     }
@@ -252,7 +245,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     private static Category mapCategory(final Map<String, Object> item) {
         return Category.builder()
-                .catId(((BigDecimal) item.get("CAT_ID")).longValue())
+                .catId(((Number) item.get("CAT_ID")).longValue())
                 .name(((String) item.get("NAME")))
                 .build();
     }
@@ -279,7 +272,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     private static UserOccupation mapOccupations(final Map<String, Object> item) {
         return UserOccupation.builder()
-                .id(((BigDecimal) item.get("ID")).longValue())
+                .id(((Number) item.get("ID")).longValue())
                 .name(((String) item.get("NAME")))
                 .domain((String)item.get("DOMAIN"))
                 .status((String)item.get("STATUS"))
@@ -303,7 +296,7 @@ public class UserRepositoryImpl implements UserRepository {
     public int updateUserPassword(String userEmail, char[] password) {
         return namedJdbcTemplate.update(updateUserPasswordSql,
                 Map.of(EMAIL, userEmail,
-                        "password", String.copyValueOf((char[]) mapNull().apply(password))));
+                        "password", String.copyValueOf(password)));
     }
 
     private List<Account> mapResultSetRows(final List<Map<String, Object>> accountMap) {
@@ -319,9 +312,11 @@ public class UserRepositoryImpl implements UserRepository {
         return Account.builder()
                 .birthday(getBirthday(accountRow))
                 .name((String) accountRow.get("NAME"))
+                .surname((String) accountRow.get("SURNAME"))
+                .username((String) accountRow.get("USERNAME"))
                 .email((String) accountRow.get(EMAIL.toUpperCase()))
-                .isEnabled(ONE.equals((accountRow.get("IS_ENABLED"))))
-                .accountId(((BigDecimal) accountRow.get("ACCOUNT_ID")).longValue())
+                .isEnabled(Boolean.TRUE.equals(accountRow.get("IS_ENABLED")))
+                .accountId(((Number) accountRow.get("ACCOUNT_ID")).longValue())
                 .roles(Collections.singletonList(getUserRole(accountRow)))
                 .build();
     }
@@ -343,15 +338,14 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     private static LocalDate getBirthday(final Map<String, Object> accountRow) {
-        return Optional.ofNullable(((Timestamp) accountRow.get("BIRTHDAY")))
-                .map(Timestamp::toLocalDateTime)
-                .map(LocalDateTime::toLocalDate)
+        return Optional.ofNullable((Date) accountRow.get("BIRTHDAY"))
+                .map(Date::toLocalDate)
                 .orElse(null);
     }
 
     private static Role getUserRole(final Map<String, Object> accountRow) {
         return Role.builder()
-                .roleId(((BigDecimal) accountRow.get("ROLE_ID")).longValue())
+                .roleId(((Number) accountRow.get("ROLE_ID")).longValue())
                 .name(UserRole.valueOf(accountRow.get("ROLE_NAME").toString()))
                 .build();
     }
@@ -398,7 +392,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     private static Account mapUserFieldsToEntity(final Map<String, Object> userFieldsMap) {
         return Account.builder()
-                .accountId(((BigDecimal) userFieldsMap.get("ACCOUNT_ID")).longValue())
+                .accountId(((Number) userFieldsMap.get("ACCOUNT_ID")).longValue())
                 .name(((String) userFieldsMap.get("NAME")))
                 .email((String) userFieldsMap.get("EMAIL"))
                 .username((String) userFieldsMap.get("USERNAME"))

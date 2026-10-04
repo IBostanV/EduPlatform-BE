@@ -21,6 +21,9 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import com.play.quiz.enums.ProfileVisibility;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -81,6 +84,23 @@ public class Account extends BaseEntity {
     private int streakFreezes;
 
     /** Notifications from after this moment are unread; null means none has been read yet. */
+    /** The cosmetics worn, by their com.play.quiz.cosmetic.Cosmetic code; null for none. */
+    @Column(name = "EQUIPPED_FRAME")
+    private String equippedFrame;
+
+    @Column(name = "EQUIPPED_NAME_COLOR")
+    private String equippedNameColor;
+
+    /** Who may see this player's activity on their profile (history, posts, friends, groups…). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "PROFILE_VISIBILITY")
+    @Builder.Default
+    private ProfileVisibility profileVisibility = ProfileVisibility.FRIENDS;
+
+    /** Whether the player has been through the site tour; it is shown until they have. */
+    @Column(name = "TOUR_SEEN")
+    private boolean tourSeen;
+
     @Column(name = "NOTIFICATIONS_READ_AT")
     private LocalDateTime notificationsReadAt;
 

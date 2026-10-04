@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.gson.JsonParser;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.CustomAnswer;
 import com.play.quiz.domain.CustomQuestion;
@@ -389,7 +388,7 @@ class CustomQuizServiceImplTest {
         Quiz quiz = customQuiz("SINGLE_CHOICE");
         when(customQuestionRepository.findAllById(Set.of(5L))).thenReturn(List.of(capitalQuestion()));
 
-        HistoryAnswer result = customQuizService.score(quiz, JsonParser.parseString("[]").getAsJsonArray()).getFirst();
+        HistoryAnswer result = customQuizService.score(quiz, "[]").getFirst();
 
         assertNull(result.getUserAnswer());
         assertEquals("Chisinau", result.getRightAnswer());
@@ -400,7 +399,7 @@ class CustomQuizServiceImplTest {
     private HistoryAnswer score(final String quizTypeName, final CustomQuestion question, final String pickJson) {
         when(customQuestionRepository.findAllById(Set.of(5L))).thenReturn(List.of(question));
         String saved = "[{\"" + question.getQuestionId() + "\": {\"answer\": " + pickJson + ", \"time\": 1200}}]";
-        return customQuizService.score(customQuiz(quizTypeName), JsonParser.parseString(saved).getAsJsonArray()).getFirst();
+        return customQuizService.score(customQuiz(quizTypeName), saved).getFirst();
     }
 
     private void givenInvitedPlayerOf(final Quiz quiz, final CustomQuestion question) {

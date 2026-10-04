@@ -1,5 +1,6 @@
 package com.play.quiz.service;
 
+import com.play.quiz.enums.ProfileVisibility;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Language;
 import com.play.quiz.dto.AccountDto;
@@ -11,6 +12,7 @@ import com.play.quiz.record.PasswordInput;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -57,9 +59,16 @@ public interface UserService {
 
     /**
      * Marks today as visited and keeps the run of consecutive days, paying for the first visit of
-     * each day. Called wherever the signed-in player is read, so simply turning up counts.
+     * each day. Called wherever the signed-in player is read, so simply turning up counts. "Today"
+     * is the date in the player's own time zone.
      */
-    Account recordVisit(String email);
+    Account recordVisit(String email, ZoneId zone);
+
+    /** The signed-in player has finished or skipped the site tour, so it is not offered again. */
+    void markTourSeen();
+
+    /** Who may see the signed-in player's activity on their profile. */
+    void setProfileVisibility(ProfileVisibility visibility);
 
     // Admin-only account management. Everything below is reachable from /api/user/admin, which
     // WebSecurity keeps to ROLE_ADMIN.

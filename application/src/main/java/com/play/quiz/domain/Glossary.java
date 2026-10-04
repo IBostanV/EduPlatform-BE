@@ -13,7 +13,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
@@ -51,7 +50,6 @@ public class Glossary extends BaseEntity {
     @JoinColumn(name = "TYPE_ID")
     private GlossaryType type;
 
-    @Lob
     private byte[] attachment;
 
     @Setter

@@ -53,6 +53,7 @@ public interface UserQuizHistoryMapper {
         return QuestionDto.builder()
                 .type(question.getType())
                 .id(question.getQuestionId())
+                .categoryId(question.getCategory() == null ? null : question.getCategory().getCatId())
                 .content(question.getContent())
                 .answers(answersToAnswersDto(question.getAnswers()))
                 .build();

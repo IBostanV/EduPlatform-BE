@@ -2,9 +2,11 @@ package com.play.quiz.domain;
 
 import com.play.quiz.converter.AttributeListConverter;
 import com.play.quiz.domain.helpers.BaseEntity;
+import com.play.quiz.domain.translation.AnswerTranslation;
 import com.play.quiz.domain.translation.QuestionTranslation;
 import com.play.quiz.enums.QuestionAttribute;
 import com.play.quiz.enums.QuestionType;
+import com.play.quiz.util.Numbers;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -78,12 +80,40 @@ public class Question extends BaseEntity {
                 this.translations);
     }
 
+    // Q_QUIZ_TYPE bit values of the types only some questions can be played as.
+    private static final long MULTIPLE_CHOICE = 2;
+    private static final long DRAG_AND_DROP = 16;
+    private static final long IN_ORDER = 128;
+
+    /**
+     * Every new question, however made, also excludes the quiz types its answers cannot be played
+     * as: multiple choice needs several right answers, drag and drop several glossary terms to pair
+     * each key with its value, in order several of them whose values are numbers to sort by. The
+     * migration exclude_unfit_quiz_types did the same to the questions already there.
+     */
+    @PrePersist
+    void excludeUnfitTypes() {
+        List<Answer> all = Objects.requireNonNullElse(answers, List.of());
+        boolean byValue = all.size() >= 2
+                && all.stream().allMatch(answer -> Objects.nonNull(answer.getGlossary()))
+                && !Objects.requireNonNullElse(attributes, List.<QuestionAttribute>of()).contains(QuestionAttribute.ANSWER_BY_KEY);
+        boolean numbers = all.stream().allMatch(answer -> Objects.nonNull(Numbers.parse(answer.getContent())));
+        long unfit = (all.size() >= 2 ? 0 : MULTIPLE_CHOICE)
+                | (byValue ? 0 : DRAG_AND_DROP)
+                | (byValue && numbers ? 0 : IN_ORDER);
+        excludeType = Objects.requireNonNullElse(excludeType, 0L) | unfit;
+    }
+
     public void fillTranslationsParent() {
         this.translations.forEach(translation -> translation.setQuestion(this));
     }
 
     public void fillAnswersParent() {
-        this.answers.forEach(answer -> answer.setQuestion(this));
+        this.answers.forEach(answer -> {
+            answer.setQuestion(this);
+            Objects.requireNonNullElse(answer.getAnswerTranslations(), List.<AnswerTranslation>of())
+                    .forEach(translation -> translation.setAnswer(answer));
+        });
     }
 
     @Override

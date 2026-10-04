@@ -25,6 +25,20 @@ public final class Coins {
     public static final int EXTRA_TIME_PRICE = 10;
     public static final int EXTRA_TIME_SECONDS = 30;
 
+    /** For winning a game of pairs that was played to the end; a draw pays everyone at the top. */
+    public static final int PAIRS_WIN = 15;
+    /** Wins a player is paid for a day, so two friends cannot farm coins off quick games. */
+    public static final int PAIRS_PAID_WINS_PER_DAY = 5;
+
+    /**
+     * What a pairs win pays when it is the {@code gameTogether}-th game today between the same two
+     * players: half the one before each time (15, 7, 3, 1, then nothing), so a rematch is still
+     * worth something and farming one friend is not.
+     */
+    public static int pairsWin(final int gameTogether) {
+        return gameTogether < 1 ? 0 : PAIRS_WIN >> Math.min(gameTogether - 1, 30);
+    }
+
     public static int forExperience(final int experience) {
         return Math.max(experience, 0) / EXPERIENCE_PER_COIN;
     }

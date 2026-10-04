@@ -10,6 +10,7 @@ import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.QuestionService;
 import com.play.quiz.service.UserService;
 import com.play.quiz.repository.AccountRepository;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -34,7 +35,7 @@ public class CoinService {
         Long accountId = currentAccountId();
         pay(accountId, Coins.STREAK_FREEZE_PRICE);
         if (accountRepository.addStreakFreeze(accountId, Coins.STREAK_FREEZE_MAX) != 1) {
-            throw new IllegalArgumentException("You already hold " + Coins.STREAK_FREEZE_MAX + " streak freezes");
+            throw new IllegalArgumentException(ServerText.t("err_max_streak_freezes", "You already hold {{max}} streak freezes", "max", Coins.STREAK_FREEZE_MAX));
         }
         int coins = accountRepository.findCoins(accountId);
         log.info("Account {} bought a streak freeze, {} coins left", accountId, coins);
@@ -49,12 +50,12 @@ public class CoinService {
     public Purchase buyHint(final Long questionId, final List<Long> shownTermIds) {
         Long rightTermId = questionService.checkMiniGameAnswer(questionId, new AnswerDto()).termId();
         if (Objects.isNull(rightTermId) || Objects.isNull(shownTermIds)) {
-            throw new IllegalArgumentException("This question has no hint");
+            throw new IllegalArgumentException(ServerText.t("err_question_no_hint", "This question has no hint"));
         }
         List<Long> wrong = new ArrayList<>(shownTermIds.stream().distinct()
                 .filter(termId -> !rightTermId.equals(termId)).toList());
         if (wrong.size() < 2) {
-            throw new IllegalArgumentException("Nothing left to take away");
+            throw new IllegalArgumentException(ServerText.t("err_nothing_to_take_away", "Nothing left to take away"));
         }
 
         Long accountId = currentAccountId();
@@ -78,7 +79,7 @@ public class CoinService {
 
     private void pay(final Long accountId, final int price) {
         if (accountRepository.spendCoins(accountId, price) != 1) {
-            throw new IllegalArgumentException("Not enough coins: this costs " + price);
+            throw new IllegalArgumentException(ServerText.t("err_not_enough_coins", "Not enough coins: this costs {{price}}", "price", price));
         }
         log.info("Account {} spent {} coins", accountId, price);
     }

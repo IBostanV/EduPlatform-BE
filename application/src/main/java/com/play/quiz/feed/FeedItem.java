@@ -24,6 +24,12 @@ import lombok.Builder;
  *   <li>{@code FRIEND_POST} — {@code refId} the post, {@code title}, {@code text}, {@code user} its
  *       author (a friend, or the reader), {@code own} whether the reader wrote it</li>
  *   <li>{@code WORLD} — {@code title} the headline, {@code url}, {@code text} the source, {@code name} the category</li>
+ *   <li>{@code GROUP_REQUEST} — {@code refId} the group, {@code name} its name, {@code user} who asks to join</li>
+ *   <li>{@code GROUP_APPROVED} — {@code refId} the group, {@code name} its name, {@code user} its owner</li>
+ *   <li>{@code DUEL_TURN} — {@code refId} the duel, {@code user} the other player, {@code count} the round</li>
+ *   <li>{@code DUEL_DONE} — {@code refId} the duel, {@code user} the other player, {@code title} WON, LOST or DRAW</li>
+ *   <li>{@code GROUP_COMMENT} — {@code refId} the group, {@code name} its name, {@code text} the start of
+ *       the reader's post, {@code user} who commented last, {@code count} how many others commented too</li>
  * </ul>
  *
  * <p>{@code key} is unique within a list, for the browser to tell the lines apart.
@@ -47,7 +53,15 @@ public record FeedItem(String key,
         CONQUEST_ROUND, CONQUEST_LOST, TROPHY, WIKI_ARTICLE,
         PATCH, QUESTIONS_ADDED, FRIEND_LEVELS, FRIEND_CONQUEST, FRIEND_POST, WORLD,
         // A friend's "beat my score", and the answer to one the reader sent.
-        CHALLENGE, CHALLENGE_DONE;
+        CHALLENGE, CHALLENGE_DONE,
+        // Someone asks to join a private group the reader owns.
+        GROUP_REQUEST,
+        // The owner of a private group let the reader in.
+        GROUP_APPROVED,
+        // Others commented on a post the reader wrote in a group: one line per post.
+        GROUP_COMMENT,
+        // A turn-based duel waits on the reader, or has been decided.
+        DUEL_TURN, DUEL_DONE;
 
         /** The kinds that make up the news, and so the ones a player can switch off. */
         public static final Set<Type> NEWS = Set.of(PATCH, QUESTIONS_ADDED, FRIEND_LEVELS, FRIEND_CONQUEST,

@@ -14,9 +14,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.CustomAnswer;
 import com.play.quiz.domain.CustomQuestion;
@@ -43,7 +42,9 @@ import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.CustomQuizService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -94,7 +95,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         // Checked before anything is saved: a question that does not fit its type is unplayable.
         QuizType quizType = quizTypeRepository.findById(customQuizDto.getQuizTypeId())
                 .filter(type -> CUSTOM_QUIZ_TYPES.containsKey(type.getName()))
-                .orElseThrow(() -> new IllegalArgumentException("This quiz type is not available for a custom quiz"));
+                .orElseThrow(() -> new IllegalArgumentException(ServerText.t("err_quiz_type_not_custom", "This quiz type is not available for a custom quiz")));
         checkQuestionsFit(quizType, customQuizDto.getQuestions());
 
         Account creator = getCurrentAccount();
@@ -145,7 +146,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         String username = authenticationFacade.getPrincipal().getUsername();
         if (!canManage(quiz, username)
                 && !quizInviteRepository.existsByQuiz_QuizIdAndAccount_Email(quizId, username)) {
-            throw new AccessDeniedException("Only the quiz's creator and the people invited can play it");
+            throw new AccessDeniedException(ServerText.t("err_custom_quiz_play_denied", "Only the quiz's creator and the people invited can play it"));
         }
 
         boolean typed = INPUT.equals(quiz.getType().getName());
@@ -204,7 +205,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
                 .orElseThrow(() -> new RecordNotFoundException("No custom quiz with id: " + quizId));
 
         if (!canManage(quiz, authenticationFacade.getPrincipal().getUsername())) {
-            throw new AccessDeniedException("Only the quiz's creator and the admins can delete it");
+            throw new AccessDeniedException(ServerText.t("err_custom_quiz_delete_denied", "Only the quiz's creator and the admins can delete it"));
         }
 
         // Everything pointing at the quiz goes first: the runs of it (whose results it would
@@ -246,11 +247,12 @@ public class CustomQuizServiceImpl implements CustomQuizService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<HistoryAnswer> score(final Quiz quiz, final JsonArray userAnswers) {
+    @SneakyThrows
+    public List<HistoryAnswer> score(final Quiz quiz, final String answersJson) {
         // The saved answers: one {"<questionId>": {"answer": …, "time": …}} object per question answered.
-        Map<Long, JsonObject> picks = new HashMap<>();
-        userAnswers.forEach(element -> element.getAsJsonObject().entrySet()
-                .forEach(entry -> picks.put(Long.valueOf(entry.getKey()), entry.getValue().getAsJsonObject())));
+        Map<Long, JsonNode> picks = new HashMap<>();
+        new ObjectMapper().readTree(answersJson).forEach(element -> element.properties()
+                .forEach(entry -> picks.put(Long.valueOf(entry.getKey()), entry.getValue())));
 
         String quizTypeName = quiz.getType().getName();
         return questionsOf(quiz).stream()
@@ -258,7 +260,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
                 .toList();
     }
 
-    private HistoryAnswer scoreQuestion(final CustomQuestion question, final JsonObject pick, final String quizTypeName) {
+    private HistoryAnswer scoreQuestion(final CustomQuestion question, final JsonNode pick, final String quizTypeName) {
         List<CustomAnswer> rightAnswers = question.getAnswers().stream().filter(CustomAnswer::isRight).toList();
         String separator = IN_ORDER.equals(quizTypeName) ? " → " : ", ";
         String rightText = rightAnswers.stream().map(CustomAnswer::getContent).collect(Collectors.joining(separator));
@@ -268,20 +270,20 @@ public class CustomQuizServiceImpl implements CustomQuizService {
             return new HistoryAnswer(0, question.getContent(), null, rightText);
         }
 
-        double time = pick.get("time").getAsDouble();
-        JsonElement answer = pick.get("answer");
+        double time = pick.get("time").asDouble();
+        JsonNode answer = pick.get("answer");
 
         if (INPUT.equals(quizTypeName)) {
-            String typed = answer.getAsString().trim();
+            String typed = answer.asText().trim();
             boolean right = rightAnswers.stream().anyMatch(option -> option.getContent().trim().equalsIgnoreCase(typed));
             return new HistoryAnswer(time, question.getContent(), typed, right ? null : rightText);
         }
 
         List<Long> picked = new ArrayList<>();
-        if (answer.isJsonArray()) {
-            answer.getAsJsonArray().forEach(id -> picked.add(id.getAsLong()));
+        if (answer.isArray()) {
+            answer.forEach(id -> picked.add(id.asLong()));
         } else {
-            picked.add(answer.getAsLong());
+            picked.add(answer.asLong());
         }
         // Already in the order written, so these are also the right order.
         List<Long> rightIds = rightAnswers.stream().map(CustomAnswer::getAnswerId).toList();
@@ -322,8 +324,8 @@ public class CustomQuizServiceImpl implements CustomQuizService {
             int wrong = Optional.ofNullable(question.getWrongAnswers()).map(List::size).orElse(0);
             if (right < shape.minRight() || right > shape.maxRight()
                     || wrong < shape.minWrong() || wrong > shape.maxWrong()) {
-                throw new IllegalArgumentException(
-                        "\"" + question.getContent() + "\" does not fit a " + quizType.getName() + " quiz");
+                throw new IllegalArgumentException(ServerText.t("err_question_unfit_type", "\"{{question}}\" does not fit a {{type}} quiz",
+                        "question", question.getContent(), "type", quizType.getName()));
             }
         });
     }

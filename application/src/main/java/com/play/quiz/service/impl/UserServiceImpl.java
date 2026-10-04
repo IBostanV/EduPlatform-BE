@@ -1,5 +1,6 @@
 package com.play.quiz.service.impl;
 
+import com.play.quiz.enums.ProfileVisibility;
 import com.play.quiz.aop.annotation.Conditional;
 import com.play.quiz.coin.Coins;
 import com.play.quiz.domain.Account;
@@ -28,6 +29,7 @@ import com.play.quiz.repository.RoleRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.util.ExperiencePayout;
 import com.play.quiz.util.PasswordPolicy;
+import com.play.quiz.util.ServerText;
 import com.play.quiz.util.SystemAssert;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserGroupService;
@@ -48,6 +50,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -158,7 +161,7 @@ public class UserServiceImpl implements UserService {
             emailService.sendEmail(emailMessage);
         } catch (MessagingException exception) {
             log.warn("Sending email failed: {}", exception.getMessage(), exception);
-            throw new EmailSendFailedException(exception.getMessage());
+            throw new EmailSendFailedException(ServerText.t("err_email_not_sent", "The email could not be sent. Please try again later."));
         }
     }
 
@@ -180,7 +183,7 @@ public class UserServiceImpl implements UserService {
     private void updatePassword(String username, char[] passwordCharArray) {
         int updated = userRepository.updateUserPassword(username, passwordCharArray);
         if (updated == 0) {
-            throw new UserUpdateException("User password could not be updated");
+            throw new UserUpdateException(ServerText.t("err_password_not_updated", "User password could not be updated"));
         }
     }
 
@@ -236,7 +239,7 @@ public class UserServiceImpl implements UserService {
     public void addFriend(Long friendId) {
         Long userId = getCurrentAccountId();
         if (userId.equals(friendId)) {
-            throw new IllegalArgumentException("You cannot add yourself as a friend");
+            throw new IllegalArgumentException(ServerText.t("err_friend_self", "You cannot add yourself as a friend"));
         }
         if (!accountRepository.existsById(friendId)) {
             throw new UserNotFoundException("No user found with id: " + friendId);
@@ -288,9 +291,9 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
-    public Account recordVisit(final String email) {
+    public Account recordVisit(final String email, final ZoneId zone) {
         Account account = findByEmail(email);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(zone);
         if (today.equals(account.getLastSeenDate())) {
             log.debug("Account {} already recorded a visit today", account.getAccountId());
             return account;
@@ -314,10 +317,29 @@ public class UserServiceImpl implements UserService {
                     account.getAccountId(), missed, account.getStreakFreezes(), account.getLoginStreak());
         }
 
-        addExperience(account.getAccountId(), ExperiencePayout.forVisit(streak));
+        // A brand-new account starts its streak but is not paid for simply existing.
+        if (account.getLastSeenDate() != null) {
+            addExperience(account.getAccountId(), ExperiencePayout.forVisit(streak));
+        }
         log.info("Account {} visited on day {} of a run", account.getAccountId(), streak);
 
         return findByEmail(email);
+    }
+
+    @Override
+    @Transactional
+    public void markTourSeen() {
+        Long accountId = getCurrentAccountId();
+        accountRepository.markTourSeen(accountId);
+        log.info("Account {} has seen the site tour", accountId);
+    }
+
+    @Override
+    @Transactional
+    public void setProfileVisibility(final ProfileVisibility visibility) {
+        Long accountId = getCurrentAccountId();
+        accountRepository.setProfileVisibility(accountId, Objects.requireNonNull(visibility, "visibility"));
+        log.info("Account {} profile activity visible to {}", accountId, visibility);
     }
 
     private Long getCurrentAccountId() {
@@ -336,7 +358,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public ManagedAccount createAccount(final ManagedAccountInput input) {
         if (Objects.isNull(input.password()) || input.password().length == 0) {
-            throw new IllegalArgumentException("A new account needs a password");
+            throw new IllegalArgumentException(ServerText.t("err_new_account_password", "A new account needs a password"));
         }
         SystemAssert.isAccountUnique(accountRepository.findByEmail(input.email()).isPresent(), input.email());
 
@@ -377,7 +399,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public ManagedAccount setAccountBlocked(final Long accountId, final boolean blocked) {
-        refuseOnSelf(accountId, "You cannot block your own account");
+        refuseOnSelf(accountId, ServerText.t("err_block_self", "You cannot block your own account"));
         Account account = getAccount(accountId);
 
         account.setIsBlocked(blocked);
@@ -394,7 +416,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteAccount(final Long accountId) {
-        refuseOnSelf(accountId, "You cannot delete your own account");
+        refuseOnSelf(accountId, ServerText.t("err_delete_self", "You cannot delete your own account"));
         accountRepository.delete(getAccount(accountId));
         log.info("Admin deleted account id: {}", accountId);
     }

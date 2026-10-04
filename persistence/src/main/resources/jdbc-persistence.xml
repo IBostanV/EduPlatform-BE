@@ -6,9 +6,9 @@
     <bean id="saveSql" class="java.lang.String">
         <constructor-arg>
             <value>
-                MERGE INTO Q_USER
-                USING DUAL ON (ACCOUNT_ID = :accountId)
-                WHEN MATCHED THEN
+                INSERT INTO Q_USER (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
+                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
+                ON CONFLICT (ACCOUNT_ID) DO
                 UPDATE SET NAME = :name,
                 EMAIL = :email,
                 IS_ENABLED = :isEnabled,
@@ -19,9 +19,6 @@
                 AVATAR = :avatar,
                 UPDATED_BY = :updatedBy,
                 UPDATED_DATE = :updatedDate
-                WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
-                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
             </value>
         </constructor-arg>
     </bean>
@@ -29,9 +26,9 @@
     <bean id="saveNoAvatarSql" class="java.lang.String">
         <constructor-arg>
             <value>
-                MERGE INTO Q_USER
-                USING DUAL ON (ACCOUNT_ID = :accountId)
-                WHEN MATCHED THEN
+                INSERT INTO Q_USER (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
+                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
+                ON CONFLICT (ACCOUNT_ID) DO
                 UPDATE SET NAME = :name,
                 EMAIL = :email,
                 IS_ENABLED = :isEnabled,
@@ -41,9 +38,6 @@
                 BIRTHDAY = :birthday,
                 UPDATED_BY = :updatedBy,
                 UPDATED_DATE = :updatedDate
-                WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, NAME, EMAIL, PASSWORD, BIRTHDAY, IS_ENABLED, LANG_ID, CREATED_BY, CREATED_DATE, UPDATED_BY, UPDATED_DATE)
-                VALUES (:accountId, :name, :email, :password, :birthday, :isEnabled, :language, :createdBy, :createdDate, :updatedBy, :updatedDate)
             </value>
         </constructor-arg>
     </bean>
@@ -61,10 +55,9 @@
     <bean id="saveFavoriteCategorySql" class="java.lang.String">
         <constructor-arg>
             <value>
-                MERGE INTO Q_USER_CATEGORY
-                USING DUAL ON (ACCOUNT_ID = :accountId AND CAT_ID = :catId)
-                WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, CAT_ID) VALUES (:accountId, :catId)
+                INSERT INTO Q_USER_CATEGORY (ACCOUNT_ID, CAT_ID)
+                SELECT :accountId, :catId
+                WHERE NOT EXISTS (SELECT 1 FROM Q_USER_CATEGORY WHERE ACCOUNT_ID = :accountId AND CAT_ID = :catId)
             </value>
         </constructor-arg>
     </bean>
@@ -72,10 +65,9 @@
     <bean id="saveUserOccupationSql" class="java.lang.String">
         <constructor-arg>
             <value>
-                MERGE INTO Q_USER_OCCUPATION
-                USING DUAL ON (ACCOUNT_ID = :accountId AND OCCUPATION_ID = :occupationId)
-                WHEN NOT MATCHED THEN
-                INSERT (ACCOUNT_ID, OCCUPATION_ID) VALUES (:accountId, :occupationId)
+                INSERT INTO Q_USER_OCCUPATION (ACCOUNT_ID, OCCUPATION_ID)
+                SELECT :accountId, :occupationId
+                WHERE NOT EXISTS (SELECT 1 FROM Q_USER_OCCUPATION WHERE ACCOUNT_ID = :accountId AND OCCUPATION_ID = :occupationId)
             </value>
         </constructor-arg>
     </bean>
@@ -104,7 +96,7 @@
         <constructor-arg>
             <value>
                 <![CDATA[
-                     SELECT USERS_SEQ.nextval FROM DUAL
+                     SELECT nextval('users_seq')
                 ]]>
             </value>
         </constructor-arg>
@@ -132,6 +124,10 @@
                         ,u.best_streak
                         ,u.coins
                         ,u.streak_freezes
+                        ,u.tour_seen
+                        ,u.profile_visibility
+                        ,u.equipped_frame
+                        ,u.equipped_name_color
                         ,u.created_date
                         ,u.updated_date
                         ,l.lang_id
@@ -215,6 +211,8 @@
                         ,u.is_enabled
                         ,u.birthday
                         ,u.name
+                        ,u.surname
+                        ,u.username
                         ,r.role_id
                         ,r.name as ROLE_NAME
                      FROM Q_USER u
@@ -249,7 +247,7 @@
         <constructor-arg>
             <value>
                 <![CDATA[
-                     UPDATE Q_USER SET IS_ENABLED = 1 WHERE ACCOUNT_ID = :accountId
+                     UPDATE Q_USER SET IS_ENABLED = TRUE WHERE ACCOUNT_ID = :accountId
                 ]]>
             </value>
         </constructor-arg>

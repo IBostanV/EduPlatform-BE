@@ -25,7 +25,7 @@ public interface EarnedTrophyRepository extends JpaRepository<EarnedTrophy, Long
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_USER_TROPHY (USER_TROPHY_ID, ACCOUNT_ID, CODE, EARNED_DATE, CREATED_BY, CREATED_DATE)
-            SELECT user_trophy_seq.NEXTVAL, :accountId, :code, SYSDATE, :accountId, SYSDATE FROM dual
+            SELECT nextval('user_trophy_seq'), :accountId, :code, LOCALTIMESTAMP, :accountId, LOCALTIMESTAMP
             WHERE NOT EXISTS (SELECT 1 FROM Q_USER_TROPHY WHERE ACCOUNT_ID = :accountId AND CODE = :code)
             """)
     int award(Long accountId, String code);
