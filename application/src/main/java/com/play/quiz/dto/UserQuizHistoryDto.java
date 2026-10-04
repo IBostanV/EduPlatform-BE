@@ -21,6 +21,8 @@ public class UserQuizHistoryDto {
     private String answersJson;
     private AccountDto account;
     private LocalDateTime completedDate;
+    // What the run paid in coins; worked out on read (UserQuizHistoryServiceImpl.getById).
+    private Integer coinsEarned;
 
     @Builder.Default
     private List<HistoryAnswer> answers = new ArrayList<>();

@@ -84,6 +84,7 @@ public class WorldNews {
             List<FeedItem> found = new ArrayList<>();
             Set<String> seen = new HashSet<>();
             boolean anyAnswered = false;
+            int failed = 0;
 
             for (Category category : categories) {
                 String name = category.getName();
@@ -104,6 +105,7 @@ public class WorldNews {
                     anyAnswered = true;
                 } catch (Exception exception) {
                     log.warn("World news for {} failed: {}", name, exception.getMessage());
+                    failed++;
                 }
                 Thread.sleep(SPACING.toMillis());
             }
@@ -112,8 +114,14 @@ public class WorldNews {
             if (anyAnswered) {
                 headlines = List.copyOf(found);
                 fetchedOn = LocalDate.now();
+                log.info("World news fetched: {} headlines from {} categories, {} failed",
+                        found.size(), categories.size(), failed);
+            } else {
+                log.warn("World news: all {} searches failed, keeping {} old headlines; retry after {}",
+                        failed, headlines.size(), RETRY_AFTER);
             }
         } catch (InterruptedException exception) {
+            log.warn("World news fetch interrupted");
             Thread.currentThread().interrupt();
         } catch (RuntimeException exception) {
             log.warn("World news fetch failed", exception);
@@ -128,6 +136,7 @@ public class WorldNews {
                 .timeout(Duration.ofSeconds(15))
                 .GET()
                 .build();
+        log.debug("World news search for {}", name);
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             throw new IllegalStateException("HTTP " + response.statusCode());
@@ -159,6 +168,7 @@ public class WorldNews {
             return LocalDateTime.parse(seenDate, SEEN_DATE).atOffset(ZoneOffset.UTC)
                     .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         } catch (RuntimeException exception) {
+            log.debug("World news seen date '{}' unreadable, using now", seenDate);
             return LocalDateTime.now();
         }
     }

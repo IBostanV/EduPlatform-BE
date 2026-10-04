@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -25,6 +26,8 @@ public class CategoryDto {
    private Boolean hasImage;
    private String parentName;
    private List<CategoryTranslationDto> categoryTranslations;
+   // Sent out for the content dashboard's list; never taken from a client.
+   private LocalDateTime createdDate;
 
    @NotBlank
    private String name;

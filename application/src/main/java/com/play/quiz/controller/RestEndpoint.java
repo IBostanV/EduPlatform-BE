@@ -25,8 +25,11 @@ public class RestEndpoint {
     public static final String REQUEST_MAPPING_USER_HISTORY = "/user-history";
     public static final String REQUEST_MAPPING_KNOWLEDGE_BASE = "/knowledge-base";
     public static final String REQUEST_MAPPING_FEEDBACK = "/feedback";
+    public static final String REQUEST_MAPPING_CLIENT_ERROR = "/client-error";
+    public static final String REQUEST_MAPPING_DONATION = "/donation";
     public static final String REQUEST_MAPPING_CONQUEST = "/conquest";
     public static final String REQUEST_MAPPING_DAILY_TASK = "/daily-task";
+    public static final String REQUEST_MAPPING_COIN = "/coin";
     public static final String REQUEST_MAPPING_IQ = "/iq";
     public static final String REQUEST_MAPPING_TROPHY = "/trophy";
     public static final String REQUEST_MAPPING_STATISTICS = "/statistics";

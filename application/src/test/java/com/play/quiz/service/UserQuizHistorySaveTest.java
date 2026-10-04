@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import com.play.quiz.conquest.ConquestAttemptRepository;
 import com.play.quiz.domain.Quiz;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.QuizType;
@@ -46,6 +47,7 @@ class UserQuizHistorySaveTest {
     @Mock private QuizRepository quizRepository;
     @Mock private QuizTypeRepository quizTypeRepository;
     @Mock private CustomQuizService customQuizService;
+    @Mock private ConquestAttemptRepository conquestAttemptRepository;
 
     private UserQuizHistoryService historyService;
 
@@ -53,7 +55,7 @@ class UserQuizHistorySaveTest {
     void init() {
         historyService = new UserQuizHistoryServiceImpl(userService, questionService, glossaryService,
                 new UserQuizHistoryMapperImpl(), authenticationFacade, userQuizHistoryRepository, quizRepository,
-                quizTypeRepository, customQuizService);
+                quizTypeRepository, customQuizService, conquestAttemptRepository);
     }
 
     @Test

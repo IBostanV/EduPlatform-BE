@@ -3,9 +3,11 @@ package com.play.quiz.controller;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_AUTH;
 
 import java.io.IOException;
+import java.util.List;
 
 import com.play.quiz.domain.helpers.AccountInfo;
 import com.play.quiz.dto.AccountDto;
+import com.play.quiz.security.social.SocialProviders;
 import com.play.quiz.service.AuthenticationService;
 import com.play.quiz.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,6 +38,13 @@ public class AuthenticationController {
 
     private final UserService userService;
     private final AuthenticationService authenticationService;
+    private final SocialProviders socialProviders;
+
+    /** The "sign in with …" buttons the login page should show: only providers with credentials. */
+    @GetMapping(value = "/social-providers", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<String> getSocialProviders() {
+        return socialProviders.ids();
+    }
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AccountDto> login(@Valid @RequestBody final AccountDto accountDto) {

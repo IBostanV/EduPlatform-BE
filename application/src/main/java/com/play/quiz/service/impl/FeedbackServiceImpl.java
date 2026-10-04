@@ -13,11 +13,13 @@ import com.play.quiz.record.UserSummary;
 import com.play.quiz.repository.FeedbackRepository;
 import com.play.quiz.service.FeedbackService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class FeedbackServiceImpl implements FeedbackService {
@@ -37,6 +39,8 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .question(StringUtils.hasText(input.question()) ? input.question().trim() : null)
                 .contactEmail(StringUtils.hasText(input.contactEmail()) ? input.contactEmail().trim() : null)
                 .build());
+        log.info("Saved feedback id: {}, type: {}, screenshot: {}",
+                saved.getFeedbackId(), saved.getType(), Objects.nonNull(saved.getScreenshot()));
         return toEntry(saved);
     }
 
@@ -86,6 +90,7 @@ public class FeedbackServiceImpl implements FeedbackService {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RecordNotFoundException("No feedback with id: " + feedbackId));
         feedback.setResolved(resolved);
+        log.info("Feedback id: {} marked resolved: {}", feedbackId, resolved);
         // save(), not just the dirty entity: the audit aspect records the admin as UPDATED_BY.
         return toEntry(feedbackRepository.save(feedback));
     }

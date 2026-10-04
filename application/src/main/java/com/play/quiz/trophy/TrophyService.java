@@ -79,6 +79,8 @@ public class TrophyService {
         }
 
         accountRepository.setPreferredTrophy(player.getAccountId(), clearing ? null : code);
+        log.info("Account {} preferred trophy {} -> {}", player.getAccountId(), player.getPreferredTrophy(),
+                clearing ? null : code);
 
         return shelf();
     }

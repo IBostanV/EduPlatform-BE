@@ -67,6 +67,7 @@ public class ConquestServiceImpl implements ConquestService {
             throw new IllegalArgumentException("You can only play for a group you are in");
         }
         accountRepository.setConquestTeam(player.getAccountId(), groupId);
+        log.info("Account {} now plays conquest for group {}", player.getAccountId(), groupId);
         return stateAt(LocalDateTime.now(clock));
     }
 

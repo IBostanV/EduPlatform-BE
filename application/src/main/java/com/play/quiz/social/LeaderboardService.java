@@ -23,6 +23,7 @@ import com.play.quiz.repository.UserQuizHistoryRepository.PlayerTotals;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
  * home page does not aggregate the whole history on every visit. Fine into the thousands of
  * players; past that, a table maintained as runs are recorded would replace the read.
  */
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class LeaderboardService {
@@ -115,6 +117,7 @@ public class LeaderboardService {
         }
         List<Row> rows = compute(board, period);
         cache.put(key, new Cached(now, rows));
+        log.debug("Leaderboard {} recomputed: {} players", key, rows.size());
         return rows;
     }
 

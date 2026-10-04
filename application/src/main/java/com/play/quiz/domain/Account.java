@@ -22,6 +22,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -71,6 +72,14 @@ public class Account extends BaseEntity {
     @Column(name = "BEST_STREAK")
     private int bestStreak;
 
+    /** The site's currency: earned with experience, spent in the shop and in quizzes (com.play.quiz.coin). */
+    @Column(name = "COINS")
+    private int coins;
+
+    /** Freezes bought and not yet used; each one covers a single missed day of the streak. */
+    @Column(name = "STREAK_FREEZES")
+    private int streakFreezes;
+
     /** Notifications from after this moment are unread; null means none has been read yet. */
     @Column(name = "NOTIFICATIONS_READ_AT")
     private LocalDateTime notificationsReadAt;
@@ -86,6 +95,11 @@ public class Account extends BaseEntity {
     /** The chat group this player plays Conquest for; null for playing on their own. */
     @Column(name = "CONQUEST_TEAM")
     private Long conquestTeam;
+
+    /** Whether express quizzes lean to this player's occupations (QuestionRepository.findOccupationQuestions). */
+    @Column(name = "OCCUPATION_QUIZZES")
+    @Builder.Default
+    private boolean occupationQuizzes = true;
 
     @Column(name = "IS_ENABLED")
     private boolean isEnabled;

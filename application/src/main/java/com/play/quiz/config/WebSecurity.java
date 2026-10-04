@@ -5,6 +5,8 @@ import static com.play.quiz.controller.RestEndpoint.QUIZ_CUSTOM;
 import static com.play.quiz.controller.RestEndpoint.QUIZ_TYPES;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_AUTH;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CLIENT_ERROR;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_DONATION;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CONQUEST;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_FEED;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_LEADERBOARD;
@@ -18,30 +20,31 @@ import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_TRANSLATION;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_USER;
 import static com.play.quiz.controller.RestEndpoint.USER_ADMIN;
 import static org.springframework.security.config.Customizer.withDefaults;
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 import java.util.List;
 
 import com.play.quiz.security.jwt.JwtAuthenticationFilter;
+import com.play.quiz.security.social.SocialLogin;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.authentication.configuration.GlobalAuthenticationConfigurerAdapter;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
@@ -51,6 +54,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+@Log4j2
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -71,18 +75,24 @@ public class WebSecurity {
     @Value("#{'${application.security.exposed-headers}'.split(',')}")
     private final List<String> exposedHeaders;
 
-    @Qualifier("quizUserDetailsService")
-    private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter authenticationFilter;
     private final CsrfTokenRequestHandler customCsrfTokenRequestAttributeHandler;
+    private final SocialLogin socialLogin;
 
     @Bean
     protected SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
+        socialLogin.configure(http);
+        final AccessDeniedHandlerImpl accessDeniedHandler = new AccessDeniedHandlerImpl();
+        accessDeniedHandler.setErrorPage("/errors/access-denied");
+        final Http403ForbiddenEntryPoint entryPoint = new Http403ForbiddenEntryPoint();
         return http.cors(withDefaults())
                 .logout(logout -> logout.deleteCookies(HttpHeaders.AUTHORIZATION.toLowerCase())
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(customCsrfTokenRequestAttributeHandler))
+                        .csrfTokenRequestHandler(customCsrfTokenRequestAttributeHandler)
+                        // Browser error reports go out on their own, without fetching a token
+                        // first; a forged one could only add a (rate-limited) log line.
+                        .ignoringRequestMatchers(antMatcher(HttpMethod.POST, CONTEXT_PATH + REQUEST_MAPPING_CLIENT_ERROR)))
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 // First match wins, so each admin-only rule sits above the broader rule for its path.
                 .authorizeHttpRequests(requests -> requests
@@ -101,6 +111,8 @@ public class WebSecurity {
 
                         // Categories: anyone may read them (home carousel, Take quiz); creating,
                         // editing and deleting one is the content dashboard's.
+                        // Except the dashboard's list, which includes hidden ones. Above the open rule.
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_CATEGORY + "/manage").hasAnyRole(CONTENT)
                         .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_CATEGORY + "/**").permitAll()
                         .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_CATEGORY + "/**").hasAnyRole(CONTENT)
 
@@ -134,6 +146,15 @@ public class WebSecurity {
                         .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_FEEDBACK,
                                 CONTEXT_PATH + REQUEST_MAPPING_FEEDBACK + "/**").hasRole(ADMIN)
 
+                        // Browser error reports: from anyone, guests included (rate-limited in the
+                        // controller); reading and clearing them is admin-only.
+                        // Where to donate: anyone may read it, only admins set it up.
+                        .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_DONATION).permitAll()
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_DONATION).hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.POST, CONTEXT_PATH + REQUEST_MAPPING_CLIENT_ERROR).permitAll()
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_CLIENT_ERROR,
+                                CONTEXT_PATH + REQUEST_MAPPING_CLIENT_ERROR + "/**").hasRole(ADMIN)
+
                         // Conquest: the map reads for everyone, so a guest sees who holds what
                         // and what the game is. Entering a run needs an account.
                         .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_CONQUEST).permitAll()
@@ -156,7 +177,21 @@ public class WebSecurity {
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling
-                                .accessDeniedPage("/errors/access-denied")
+                                // Logged here: these refusals never reach a controller (a missing
+                                // role, a bad CSRF token).
+                                .accessDeniedHandler((request, response, exception) -> {
+                                    log.warn("Access denied to {} {}: {}", request.getMethod(),
+                                            request.getRequestURI(), exception.getMessage());
+                                    accessDeniedHandler.handle(request, response, exception);
+                                })
+                                // Said outright because it is only the default without a login
+                                // flow: with social sign-in on, Spring would otherwise answer an
+                                // unauthenticated API call with a redirect instead of a 403.
+                                .authenticationEntryPoint((request, response, exception) -> {
+                                    log.info("Refused unauthenticated {} {}: {}", request.getMethod(),
+                                            request.getRequestURI(), exception.getMessage());
+                                    entryPoint.commence(request, response, exception);
+                                })
                 )
                 .sessionManagement(sessionManagement ->
                         sessionManagement
@@ -184,25 +219,16 @@ public class WebSecurity {
         return source;
     }
 
+    // Static, so it needs no WebSecurity to exist: the account services it is handed to are also
+    // what social sign-in (built into this class's filter chain) depends on.
     @Bean
-    protected PasswordEncoder passwordEncoder() {
+    protected static PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
     @Bean
     public AuthenticationManager authenticationManager(final AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        handleGlobalAuthenticationConfigurerAdapter();
+        // Spring Boot builds it from the one UserDetailsService and PasswordEncoder bean.
         return authenticationConfiguration.getAuthenticationManager();
-    }
-
-    private void handleGlobalAuthenticationConfigurerAdapter() {
-        new GlobalAuthenticationConfigurerAdapter() {
-            @Override
-            public void configure(final AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
-                authenticationManagerBuilder
-                        .userDetailsService(userDetailsService)
-                        .passwordEncoder(passwordEncoder());
-            }
-        };
     }
 }

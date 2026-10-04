@@ -31,18 +31,22 @@ public class QuestionGenerationEngine {
         List<Question> templateQuestionList = questionRepository.findByTypeAndCategory(
                 QuestionType.TEMPLATE, glossary.getCategory());
 
-        return templateQuestionList.stream()
+        List<Question> generated = templateQuestionList.stream()
                 .map(templateQuestion -> createQuestion(templateQuestion, glossary))
                 .toList();
+        log.info("Generated {} questions for glossary id: {}", generated.size(), glossary.getTermId());
+        return generated;
     }
 
     @Transactional
     public List<Question> generateFromCreatedTemplate(final Question template) {
         log.info("Generating questions from template: [{},{}]", template.getQuestionId(), template.getCategory());
         List<Glossary> categoryGlossaries = glossaryRepository.findAllByCategory(template.getCategory());
-        return categoryGlossaries.stream().distinct()
+        List<Question> generated = categoryGlossaries.stream().distinct()
                 .map(glossary -> createQuestion(template, glossary))
                 .toList();
+        log.info("Generated {} questions from template id: {}", generated.size(), template.getQuestionId());
+        return generated;
     }
 
     private Question createQuestion(final Question templateQuestion, final Glossary glossary) {

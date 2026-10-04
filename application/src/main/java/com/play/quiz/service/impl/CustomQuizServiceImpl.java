@@ -44,10 +44,12 @@ import com.play.quiz.repository.UserRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.CustomQuizService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class CustomQuizServiceImpl implements CustomQuizService {
@@ -119,6 +121,8 @@ public class CustomQuizServiceImpl implements CustomQuizService {
                 .build());
 
         invite(quiz, creator, customQuizDto.getInvitedUserIds());
+        log.info("Created custom quiz id: {}, type: {}, category: {}, questions: {}",
+                quiz.getQuizId(), quizType.getName(), homeCategoryId, questionIds.size());
 
         return quizMapper.toDto(quiz).toBuilder()
                 // Asked for per question, spent over the whole run.
@@ -209,6 +213,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         quizInviteRepository.deleteByQuiz_QuizId(quizId);
         customQuestionRepository.deleteAllById(quiz.getQuestionIds());
         quizRepository.delete(quiz);
+        log.info("Deleted custom quiz id: {} with its {} questions, invites and history", quizId, quiz.getQuestionIds().size());
     }
 
     /** Its creator, or an admin moderating what players write. */
@@ -354,14 +359,17 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         ids.remove(creator.getAccountId());
         // Checked before querying: an empty IN () is invalid SQL.
         if (ids.isEmpty()) {
+            log.debug("Custom quiz id: {} has nobody to invite", quiz.getQuizId());
             return;
         }
 
         // save() one by one, not saveAll(): the audit aspect only intercepts save().
-        userRepository.findByUserIds(ids).forEach(account -> quizInviteRepository.save(QuizInvite.builder()
+        Set<Account> invited = userRepository.findByUserIds(ids);
+        invited.forEach(account -> quizInviteRepository.save(QuizInvite.builder()
                 .quiz(quiz)
                 .account(account)
                 .build()));
+        log.info("Invited {} of {} requested users to custom quiz id: {}", invited.size(), ids.size(), quiz.getQuizId());
     }
 
     private Account getCurrentAccount() {

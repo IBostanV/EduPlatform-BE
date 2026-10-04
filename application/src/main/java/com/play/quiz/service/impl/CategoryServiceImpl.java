@@ -32,6 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryDto save(final CategoryDto categoryDto, MultipartFile attachment) {
         Category category = categoryMapper.toEntity(categoryDto, attachment);
         Category entity = categoryRepository.save(category);
+        log.info("Saved category id: {}, name: {}", entity.getCatId(), entity.getName());
         return categoryMapper.toDto(entity);
     }
 
@@ -56,7 +57,10 @@ public class CategoryServiceImpl implements CategoryService {
                 .attachment(attachment == null ? category.getAttachment() : readBytes(attachment))
                 .build();
 
-        return categoryMapper.toDto(categoryRepository.save(updated));
+        Category saved = categoryRepository.save(updated);
+        log.info("Updated category id: {}, parent: {}, visible: {}, new image: {}",
+                categoryId, changes.getParentId(), changes.getVisible(), attachment != null);
+        return categoryMapper.toDto(saved);
     }
 
     @SneakyThrows
@@ -79,6 +83,11 @@ public class CategoryServiceImpl implements CategoryService {
         Sort sort = Sort.by(Sort.Direction.ASC, CAT_ID);
         List<Category> categories = categoryRepository.findAllActive(sort);
         return categoryMapper.toDtoList(categories);
+    }
+
+    @Override
+    public List<CategoryDto> getAllCategoriesForManagement() {
+        return categoryMapper.toDtoList(categoryRepository.findAll(Sort.by(Sort.Direction.ASC, CAT_ID)));
     }
 
     @Override

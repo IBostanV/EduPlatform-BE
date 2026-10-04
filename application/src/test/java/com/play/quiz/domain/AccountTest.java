@@ -34,8 +34,19 @@ class AccountTest {
                 continue;
             }
 
+            // A primitive boolean is read as isX(), which Lombok and the bean rules both use.
             String getter = GETTER + capitalize(field);
-            assertTrue(getters.contains(getter), "Missing getter for field: " + field);
+            boolean isGetter = isPrimitiveBoolean(clazz, field)
+                    && getAllMethodsStartingWith(clazz, "is").contains("is" + capitalize(field));
+            assertTrue(getters.contains(getter) || isGetter, "Missing getter for field: " + field);
+        }
+    }
+
+    private static boolean isPrimitiveBoolean(final Class<?> clazz, final String field) {
+        try {
+            return clazz.getDeclaredField(field).getType() == boolean.class;
+        } catch (NoSuchFieldException exception) {
+            return false;
         }
     }
 

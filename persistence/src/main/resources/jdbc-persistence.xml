@@ -130,6 +130,8 @@
                         ,u.last_seen_date
                         ,u.login_streak
                         ,u.best_streak
+                        ,u.coins
+                        ,u.streak_freezes
                         ,u.created_date
                         ,u.updated_date
                         ,l.lang_id

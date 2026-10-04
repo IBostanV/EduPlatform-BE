@@ -30,6 +30,9 @@ public interface QuestionService {
 
     void deactivate(final Long questionId);
 
+    /** Random questions close to this player's occupations; none if they have none or turned it off. */
+    List<Question> getOccupationQuestions(String email, int count);
+
     List<Question> getGeneralKnowledgeQuestions(int questionCount);
 
     Question getById(final Long questionId);
@@ -39,6 +42,9 @@ public interface QuestionService {
     List<AnswerDto> getAnswers(final Long questionId);
 
     QuestionDto getQuestionWithAnswerOptions(final Long questionId);
+
+    /** The question with its options shaped the way a quiz type (Q_QUIZ_TYPE.NAME, null for none) plays them. */
+    QuestionDto getQuestionWithAnswerOptions(final Long questionId, final String quizType);
 
     Optional<QuestionDto> getMiniGameQuestion();
 

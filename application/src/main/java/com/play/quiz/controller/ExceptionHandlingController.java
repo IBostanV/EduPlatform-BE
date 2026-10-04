@@ -11,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Log4j2
 @RestControllerAdvice
 public class ExceptionHandlingController {
+
+    public static final String BAD_LOGIN = "Wrong email or password";
 
     @ExceptionHandler({UserNotFoundException.class, UsernameNotFoundException.class})
     public ResponseEntity<String> userNotFound(final RuntimeException exception) {
@@ -51,6 +54,17 @@ public class ExceptionHandlingController {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(exception.getMessage());
+    }
+
+    // A failed password login. Same answer for an unknown email and a wrong password, so the
+    // form does not tell anyone which addresses have accounts; the log says which it was. 400,
+    // not 401: the site drops 401/403 silently when nobody is signed in, which at login is everyone.
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<String> authenticationFailed(final AuthenticationException exception) {
+        log.info("Login refused: {}", exception.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(BAD_LOGIN);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

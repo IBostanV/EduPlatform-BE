@@ -85,12 +85,12 @@ public class IqService {
     public IqState start() {
         Account player = currentAccount();
 
-        Optional<IqSession> running = sessionRepository
-                .findFirstByAccount_AccountIdAndFinishedDateIsNullOrderBySessionIdDesc(player.getAccountId())
-                .filter(session -> session.getStartedDate().isAfter(LocalDateTime.now().minus(RESUME_LIMIT)));
+        Optional<IqSession> running = openSession(player.getAccountId());
         if (running.isPresent()) {
             // Resumed on the question it was left on, with its clock restarted: the alternative
             // is a player who reloads losing an item to a timer they never saw.
+            log.info("Account {} resumed IQ test {} at {} answered", player.getAccountId(),
+                    running.get().getSessionId(), running.get().getAnswered());
             return serve(running.get(), true);
         }
 
@@ -101,7 +101,10 @@ public class IqService {
                 .findByAccount_AccountIdAndFinishedDateIsNotNullOrderByFinishedDateDesc(player.getAccountId())
                 .size());
 
-        return serve(sessionRepository.save(session), true);
+        IqSession saved = sessionRepository.save(session);
+        log.info("Account {} started IQ test {} (attempt {})", player.getAccountId(), saved.getSessionId(),
+                saved.getAttemptNo());
+        return serve(saved, true);
     }
 
     /**
@@ -112,12 +115,12 @@ public class IqService {
     @Transactional
     public IqState answer(final int chosen) {
         Account player = currentAccount();
-        IqSession session = sessionRepository
-                .findFirstByAccount_AccountIdAndFinishedDateIsNullOrderBySessionIdDesc(player.getAccountId())
+        IqSession session = openSession(player.getAccountId())
                 .orElseThrow(() -> new RecordNotFoundException("No test in progress"));
         // No question on screen: an answer sent twice, or one sent after the test was resumed
         // elsewhere. Nothing to score, so the session is handed back as it stands.
         if (Objects.isNull(session.getCurrentItemId())) {
+            log.info("IQ test {}: answer with no question on screen, ignored", session.getSessionId());
             return serve(session, true);
         }
         IqItem item = itemRepository.findById(session.getCurrentItemId())
@@ -136,6 +139,8 @@ public class IqService {
                 .build());
         session.setAnswered(session.getAnswered() + 1);
         session.setCurrentItemId(null);
+        log.debug("IQ test {}: item {} answered {} in {}s, correct {}, late {}", session.getSessionId(),
+                item.getItemId(), chosen, seconds, correct, late);
 
         return serve(session, false);
     }
@@ -176,6 +181,7 @@ public class IqService {
         }
         if (Objects.isNull(next)) {
             // The bank ran out, which only happens if it is smaller than MAX_ITEMS.
+            log.warn("IQ test {}: item bank ran out after {} answers", session.getSessionId(), answers.size());
             return new IqState(null, true, finish(session, ability, answers));
         }
 
@@ -184,6 +190,12 @@ public class IqService {
         sessionRepository.save(session);
 
         return new IqState(question(next, answers.size()), false, null);
+    }
+
+    /** The test still on the go; one left longer than RESUME_LIMIT is abandoned, for answers too. */
+    private Optional<IqSession> openSession(final Long accountId) {
+        return sessionRepository.findFirstByAccount_AccountIdAndFinishedDateIsNullOrderBySessionIdDesc(accountId)
+                .filter(session -> session.getStartedDate().isAfter(LocalDateTime.now().minus(RESUME_LIMIT)));
     }
 
     private boolean isOver(final IqSession session, final Rasch.Ability ability, final int answered) {
@@ -307,6 +319,7 @@ public class IqService {
      * is. Seeded difficulties are a guess from the template's rules; this is the measurement.
      */
     private void learnFrom(final List<IqResponse> answers, final double theta) {
+        log.debug("IQ items updated from {} answers at theta {}", answers.size(), theta);
         answers.forEach(answer -> {
             IqItem item = answer.getItem();
             item.setAttempts(item.getAttempts() + 1);
@@ -335,9 +348,12 @@ public class IqService {
     /** Finishing the test pays, once: it is a long sit, and only the first go is the real one. */
     private void payFor(final IqSession session) {
         if (session.getAttemptNo() > 0) {
+            log.info("IQ test {} is attempt {}: no experience", session.getSessionId(), session.getAttemptNo());
             return;
         }
         userService.addExperience(session.getAccount().getAccountId(), ExperiencePayout.IQ_TEST);
+        log.info("Account {} paid {} experience for IQ test {}", session.getAccount().getAccountId(),
+                ExperiencePayout.IQ_TEST, session.getSessionId());
     }
 
     private IqResult resultOf(final IqSession session) {

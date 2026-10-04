@@ -29,6 +29,7 @@ public abstract class CategoryMapper {
     @Mapping(target = "naturalId", source = "name", qualifiedByName = "upperCase")
     @Mapping(target = "parent", source = "parentId", qualifiedByName = "handleParent")
     @Mapping(target = "attachment", expression = "java(handleAttachment(attachment))")
+    @Mapping(target = "createdDate", ignore = true)
     public abstract Category toEntity(final CategoryDto categoryDto, @Context final MultipartFile attachment);
 
     @Named("upperCase")

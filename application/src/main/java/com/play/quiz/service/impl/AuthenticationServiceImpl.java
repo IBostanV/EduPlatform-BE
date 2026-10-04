@@ -2,6 +2,7 @@ package com.play.quiz.service.impl;
 
 import java.util.Collections;
 
+import com.play.quiz.exception.UserNotFoundException;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.helpers.AccountInfo;
 import com.play.quiz.dto.AccountDto;
@@ -11,10 +12,12 @@ import com.play.quiz.mapper.AccountMapper;
 import com.play.quiz.security.jwt.JwtProvider;
 import com.play.quiz.service.AuthenticationService;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.PasswordPolicy;
 import com.play.quiz.util.SystemAssert;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +36,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AccountInfo register(final AccountDto accountDto) {
         log.info("Register user with email: {}", accountDto.getEmail());
+        PasswordPolicy.requireStrong(accountDto.getPassword(), accountDto.getEmail());
         SystemAssert.isAccountUnique(userService.userExists(accountDto), accountDto.getEmail());
         Account account = userService.save(assignRoles(accountDto));
         userService.sendAccountVerificationEmail(account);
@@ -54,7 +58,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AccountInfo login(final AccountDto accountDto) {
         log.info("Login user with email: {}", accountDto.getEmail());
-        Account account = userService.findByEmail(accountDto.getEmail());
+        Account account;
+        try {
+            account = userService.findByEmail(accountDto.getEmail());
+        } catch (UserNotFoundException unknown) {
+            // Answered like a wrong password (ExceptionHandlingController), so the login form
+            // cannot be used to find out which emails have accounts.
+            throw new BadCredentialsException("No account with this email");
+        }
         SystemAssert.isAccountEnabled(account.isEnabled(), account.getEmail());
         SystemAssert.isAccountNotBlocked(account.isBlocked(), account.getEmail());
         Authentication authentication = authenticate(accountDto);

@@ -13,6 +13,7 @@ import com.play.quiz.record.KnowledgeBaseArticle;
 import com.play.quiz.repository.KnowledgeBaseRepository;
 import com.play.quiz.service.KnowledgeBaseService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
@@ -36,6 +38,8 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         knowledgeBaseRecordDto.setContent(sanitize(knowledgeBaseRecordDto.getContent()));
         KnowledgeBaseRecord entity = knowledgeBaseMapper.toEntity(knowledgeBaseRecordDto, attachment);
         KnowledgeBaseRecord knowledgeBaseRecord = knowledgeBaseRepository.save(entity);
+        log.info("Saved knowledge base record id: {}, status: {}, visible: {}",
+                knowledgeBaseRecord.getId(), knowledgeBaseRecord.getStatus(), knowledgeBaseRecord.getVisible());
         return knowledgeBaseMapper.toDto(knowledgeBaseRecord);
     }
 
@@ -79,6 +83,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         } else {
             knowledgeBaseRepository.downvote(id);
         }
+        log.info("Knowledge base article id: {} voted helpful: {}", id, helpful);
         // The bulk UPDATE bypassed the persistence context, so read the new counts afresh.
         return knowledgeBaseRepository.findPublishedById(id).map(this::toPublicDto).orElseThrow();
     }
@@ -96,6 +101,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     public Optional<KnowledgeBaseRecordDto> getDailyRecord() {
         List<Long> ids = knowledgeBaseRepository.findPublishedIds();
         if (ids.isEmpty()) {
+            log.debug("No published knowledge base record for the daily record");
             return Optional.empty();
         }
         Long id = ids.get((int) Math.floorMod(LocalDate.now().toEpochDay(), (long) ids.size()));

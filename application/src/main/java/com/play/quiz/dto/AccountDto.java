@@ -40,6 +40,11 @@ public class AccountDto {
     private Integer experience;
     private int loginStreak;
     private int bestStreak;
+    // Read-only for the same reason as the level below: the profile form posts this shape back.
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private int coins;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private int streakFreezes;
     private String preferredTrophy;
     /** The chosen trophy as it is drawn, so the bar needs no second request to show it. */
     private TrophyCatalog.TrophyFace trophy;

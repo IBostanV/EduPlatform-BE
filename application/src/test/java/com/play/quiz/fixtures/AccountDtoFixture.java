@@ -32,7 +32,7 @@ public class AccountDtoFixture {
     private static AccountDto.AccountDtoBuilder defaultBuilder() {
         return AccountDto.builder()
                 .id(1L)
-                .password("Qwerty123".toCharArray())
+                .password("Kettle9-blue".toCharArray())
                 .name("User")
                 .birthday(LocalDate.of(2022, 12, 31))
                 .roles(Collections.singletonList(RoleDtoFixture.getUserRole()));

@@ -50,7 +50,7 @@ public class PQUserDetailsServiceImpl implements PQUserDetailsService {
             return Collections.singletonList(new SimpleGrantedAuthority(UserRole.ROLE_USER.name()));
         }
 
-        log.info("Given user roles: {}", account.getRoles());
+        log.debug("Given user roles: {}", account.getRoles());
         return account.getRoles().stream()
                 .map(Role::getName)
                 .map(Enum::name)

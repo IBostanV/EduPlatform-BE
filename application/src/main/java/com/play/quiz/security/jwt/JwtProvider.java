@@ -34,7 +34,7 @@ public class JwtProvider {
         try {
             return verifyAndGetUsernameFromToken(jwtToken);
         } catch (ParseException | JOSEException exception) {
-            log.warn("Error while parsing the token: {}", jwtToken);
+            log.warn("Error while parsing the token: {}", exception.getMessage());
             throw new TokenProcessException(exception);
         }
     }
@@ -45,9 +45,14 @@ public class JwtProvider {
 
         if (signedJWT.verify(verifier)) {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            // verify() checks the signature only: without this a token, leaked or not, works forever.
+            Date expiry = claimsSet.getExpirationTime();
+            if (expiry == null || expiry.before(new Date())) {
+                throw new TokenProcessException("Token expired");
+            }
             return claimsSet.getSubject();
         } else {
-            log.warn("Could not process provided token {}", jwtToken);
+            log.warn("Token signature verification failed");
             throw new TokenProcessException("Could not process provided token");
         }
     }

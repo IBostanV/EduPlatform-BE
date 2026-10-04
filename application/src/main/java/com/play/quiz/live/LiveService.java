@@ -116,7 +116,14 @@ public class LiveService {
         this.authenticationFacade = authenticationFacade;
         this.messaging = messaging;
         this.presence = presence;
-        clock.scheduleAtFixedRate(this::sweep, 1, 1, TimeUnit.MINUTES);
+        // A repeating task that throws is never run again, and silently: the guard keeps the sweep alive.
+        clock.scheduleAtFixedRate(() -> {
+            try {
+                sweep();
+            } catch (RuntimeException exception) {
+                log.error("Live sweep failed; trying again in a minute", exception);
+            }
+        }, 1, 1, TimeUnit.MINUTES);
     }
 
     @PreDestroy
@@ -200,6 +207,7 @@ public class LiveService {
                 if (player.left && !room.over()) {
                     player.left = false;
                     pushAll(room);
+                    log.info("Account {} rejoined {} {}", me.getAccountId(), room.mode, room.code);
                 }
                 return view(room, me.getAccountId());
             }
@@ -217,6 +225,7 @@ public class LiveService {
             room.players.put(me.getAccountId(), new Player(me.getAccountId(), me.getEmail(), UserSummary.of(me)));
             room.lastActivity = Instant.now();
             pushAll(room);
+            log.info("Account {} joined {} {}: {} players", me.getAccountId(), room.mode, room.code, room.players.size());
             return view(room, me.getAccountId());
         }
     }
@@ -227,9 +236,11 @@ public class LiveService {
         LiveRoom room = room(code);
         synchronized (room) {
             if (room.invited.remove(me) == null) {
+                log.info("Account {} declined {} {} but was not invited (or already answered)", me, room.mode, room.code);
                 return;
             }
             room.declined.add(me);
+            log.info("Account {} declined {} {}", me, room.mode, room.code);
             if (room.mode == Mode.DUEL) {
                 close(room, "DECLINED");
             } else {
@@ -244,9 +255,12 @@ public class LiveService {
         synchronized (room) {
             Player player = room.players.get(me.getAccountId());
             if (player == null || room.over()) {
+                log.info("Account {} left {} {} but was {}", me.getAccountId(), room.mode, room.code,
+                        player == null ? "not a player" : "too late: " + room.phase);
                 return;
             }
             presence.setActivity(me.getEmail(), null);
+            log.info("Account {} left {} {} during {}", me.getAccountId(), room.mode, room.code, room.phase);
             if (room.phase == Phase.LOBBY) {
                 if (me.getAccountId().equals(room.hostId)) {
                     close(room, "HOST_LEFT");
@@ -290,6 +304,7 @@ public class LiveService {
         }
         synchronized (room) {
             if (room.phase != Phase.LOBBY) {
+                log.info("{} {} was already started or closed ({}) while its questions were read", room.mode, room.code, room.phase);
                 return view(room, me);
             }
             room.questions = questions;
@@ -315,6 +330,8 @@ public class LiveService {
             }
             if (room.phase != Phase.QUESTION || room.index != index || room.answers.containsKey(me)) {
                 // Too late, or twice: the answer that counted stands.
+                log.info("Account {} answer to question {} of {} ignored: phase {}, current question {}, already answered {}",
+                        me, index, room.code, room.phase, room.index, room.answers.containsKey(me));
                 return view(room, me);
             }
             QuestionDto question = room.questions.get(index);
@@ -327,6 +344,8 @@ public class LiveService {
             player.lastPoints = correct ? BASE_POINTS + Math.round(SPEED_POINTS * (float) left / total) : 0;
             player.score += player.lastPoints;
             if (correct) player.correct++;
+            log.debug("Account {} answered question {} of {}: correct {}, {} points", me, index, room.code,
+                    correct, player.lastPoints);
 
             if (allAnswered(room)) {
                 reveal(room, index);
@@ -391,7 +410,10 @@ public class LiveService {
         room.lastActivity = Instant.now();
         room.players.values().forEach(player -> presence.setActivity(player.email, null));
         pushAll(room);
-        log.info("{} {} finished", room.mode, room.code);
+        log.info("{} {} finished after {} of {} questions: {}", room.mode, room.code, room.index + 1,
+                room.questions.size(), room.players.values().stream()
+                        .map(player -> player.id + "=" + player.score + (player.left ? " (left)" : ""))
+                        .toList());
     }
 
     /** Called with the room's lock held. */
@@ -405,20 +427,28 @@ public class LiveService {
             send(player.email, closed);
         });
         accountRepository.findAllById(room.invited.keySet()).forEach(account -> send(account.getEmail(), closed));
+        log.info("{} {} closed: {}", room.mode, room.code, reason);
     }
 
     /** Once a minute: rooms nobody started, and finished ones whose results nobody needs now. */
     private void sweep() {
         Instant now = Instant.now();
+        int[] expired = {0, 0};
         rooms.values().forEach(room -> {
             synchronized (room) {
                 if (room.phase == Phase.LOBBY && room.lastActivity.plus(LOBBY_IDLE).isBefore(now)) {
                     close(room, "EXPIRED");
+                    expired[0]++;
                 } else if (room.phase == Phase.FINISHED && room.lastActivity.plus(KEEP_FINISHED).isBefore(now)) {
                     rooms.remove(room.code);
+                    expired[1]++;
                 }
             }
         });
+        if (expired[0] + expired[1] > 0) {
+            log.info("Live sweep: {} idle lobbies closed, {} finished rooms dropped, {} rooms left",
+                    expired[0], expired[1], rooms.size());
+        }
     }
 
     private void schedule(final LiveRoom room, final Duration delay, final Runnable step) {
