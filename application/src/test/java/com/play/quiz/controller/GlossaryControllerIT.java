@@ -108,7 +108,7 @@ class GlossaryControllerIT {
                         .header(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON_VALUE))
                 .andExpect(status().is4xxClientError())
                 .andExpect(result -> assertInstanceOf(RecordNotFoundException.class, result.getResolvedException()))
-                .andExpect(content().string("No records found by glossary id: 2"));
+                .andExpect(content().string("This could not be found. It may have been deleted."));
     }
 
     @Test

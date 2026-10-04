@@ -1,5 +1,6 @@
 package com.play.quiz.repository;
 
+import com.play.quiz.enums.ProfileVisibility;
 import com.play.quiz.domain.Account;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -108,6 +109,22 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Account a SET a.notificationsReadAt = :readAt WHERE a.accountId = :accountId")
     void setNotificationsReadAt(Long accountId, LocalDateTime readAt);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.equippedFrame = :code WHERE a.accountId = :accountId")
+    void setEquippedFrame(Long accountId, String code);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.equippedNameColor = :code WHERE a.accountId = :accountId")
+    void setEquippedNameColor(Long accountId, String code);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.profileVisibility = :visibility WHERE a.accountId = :accountId")
+    void setProfileVisibility(Long accountId, ProfileVisibility visibility);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Account a SET a.tourSeen = true WHERE a.accountId = :accountId")
+    void markTourSeen(Long accountId);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Account a SET a.conquestTeam = :groupId WHERE a.accountId = :accountId")

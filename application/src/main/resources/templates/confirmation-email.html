@@ -5,15 +5,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 </head>
 <body>
+<p th:text="${greeting}">Hello human!</p>
 <p>
-    Hello human!
+    <span th:text="${instruction}">To activate your account please use the following link:</span>
+    <a th:href="@{${activateAccountServerHost}(token=${token})}" th:text="${linkText}">Activate account</a>
 </p>
 <p>
-    To activate your account please use the following link: <a th:href="@{${activateAccountServerHost}(token=${token})}">Activate account</a>
-</p>
-<p>
-    Kind Regards,<br/>
-    <em>The Play Quiz Team</em>
+    <span th:text="${regards}">Kind Regards,</span><br/>
+    <em th:text="${team}">The Play Quiz Team</em>
 </p>
 </body>
 </html>

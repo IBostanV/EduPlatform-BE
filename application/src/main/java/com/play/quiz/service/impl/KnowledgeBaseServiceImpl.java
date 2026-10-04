@@ -44,6 +44,17 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.Map<Long, ArticleLink> bestArticles(final java.util.Collection<Long> categoryIds) {
+        if (categoryIds.isEmpty()) return java.util.Map.of();
+        java.util.Map<Long, ArticleLink> best = new java.util.HashMap<>();
+        // Most helpful first, so the first seen for a category is the one to keep.
+        knowledgeBaseRepository.findPublishedIn(categoryIds).forEach(article ->
+                best.putIfAbsent(article.getCategory().getCatId(), new ArticleLink(article.getId(), article.getTitle())));
+        return best;
+    }
+
+    @Override
     public List<KnowledgeBaseRecordDto> getAllRecords() {
         List<KnowledgeBaseRecord> knowledgeBaseRecords = knowledgeBaseRepository.findAll();
         return knowledgeBaseMapper.toDto(knowledgeBaseRecords);

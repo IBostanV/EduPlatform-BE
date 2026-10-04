@@ -103,12 +103,11 @@ public final class PasswordPolicy {
 
     public static void requireStrong(final char[] password, final String email) {
         if (!isStrong(password)) {
-            throw new IllegalArgumentException("The password must be at least " + MIN_LENGTH
-                    + " characters and mix at least " + MIN_KINDS
-                    + " of: lowercase, uppercase, digits, symbols");
+            throw new IllegalArgumentException(ServerText.t("err_password_weak", "The password must be at least {{min}} characters and mix at least {{kinds}} of: lowercase, uppercase, digits, symbols",
+                    "min", MIN_LENGTH, "kinds", MIN_KINDS));
         }
         if (isCommon(password, email)) {
-            throw new IllegalArgumentException("That password is too common and easy to guess: choose another");
+            throw new IllegalArgumentException(ServerText.t("err_password_common", "That password is too common and easy to guess: choose another"));
         }
     }
 }

@@ -13,7 +13,7 @@ public abstract class SystemAssert extends Assert {
 
     public static void isAccountEnabled(boolean isEnabled, String userEmail) {
         if (!isEnabled) {
-            throw new AccountDisabledException("Account "+ userEmail +" is disabled");
+            throw new AccountDisabledException(ServerText.t("err_account_disabled", "Account {{email}} is disabled", "email", userEmail));
         }
     }
 
@@ -21,19 +21,19 @@ public abstract class SystemAssert extends Assert {
     // one is not something they can put right themselves.
     public static void isAccountNotBlocked(boolean isBlocked, String userEmail) {
         if (isBlocked) {
-            throw new AccountDisabledException("Account "+ userEmail +" has been blocked by an administrator");
+            throw new AccountDisabledException(ServerText.t("err_account_blocked", "Account {{email}} has been blocked by an administrator", "email", userEmail));
         }
     }
 
     public static void isAccountUnique(boolean userExists, String userEmail) {
         if (userExists) {
-            throw new DuplicateUserException("User "+ userEmail +" already exists");
+            throw new DuplicateUserException(ServerText.t("err_user_exists", "User {{email}} already exists", "email", userEmail));
         }
     }
 
     public static void isTemplateQuestion(final QuestionDto questionDto) {
         if (!Objects.equals(QuestionType.TEMPLATE, questionDto.getType())) {
-            throw new IllegalTemplateQuestionException("Question ["+ questionDto.getId() +"] is not of type TEMPLATE");
+            throw new IllegalTemplateQuestionException(ServerText.t("err_question_not_template", "Question [{{id}}] is not of type TEMPLATE", "id", questionDto.getId()));
         }
     }
 }

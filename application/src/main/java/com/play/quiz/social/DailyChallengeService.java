@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -17,6 +18,7 @@ import com.play.quiz.repository.UserQuizHistoryRepository.FirstRun;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.QuizService;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.ServerText;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class DailyChallengeService {
     static final int TOP = 10;
 
     private final DailyChallengeDays days;
+    private final DailyChallengeRepository dailyChallengeRepository;
     private final UserQuizHistoryRepository historyRepository;
     private final AccountRepository accountRepository;
     private final QuizService quizService;
@@ -50,9 +53,12 @@ public class DailyChallengeService {
      * @param you     the reader's own place, or null before they have played
      * @param closesAt when the day ends and a new set of questions takes over, as epoch ms: the
      *                 day is UTC's, which a local date-time would not say
+     * @param number  the puzzle's number, counted from the first day there was one: what a shared
+     *                result names ("PlayQuiz #42")
+     * @param streak  how many days in a row the reader has played it, today included once played
      */
     public record Status(LocalDate day, int questions, int players, Entry you, List<Entry> top,
-                         long closesAt) {
+                         long closesAt, long number, int streak) {
 
         @JsonProperty
         public boolean played() {
@@ -78,10 +84,29 @@ public class DailyChallengeService {
                 .mapToObj(index -> entry(index + 1, runs.get(index), people))
                 .toList();
 
+        LocalDate first = dailyChallengeRepository.findFirstDay();
         return new Status(day, QUESTIONS, runs.size(),
                 entries.stream().filter(entry -> me.equals(entry.user().id())).findFirst().orElse(null),
                 entries.stream().filter(entry -> entry.rank() <= TOP).toList(),
-                day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli());
+                day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                Objects.isNull(first) ? 1 : java.time.temporal.ChronoUnit.DAYS.between(first, day) + 1,
+                streak(dailyChallengeRepository.findPlayedDays(me), day));
+    }
+
+    /**
+     * Days in a row ending today, or ending yesterday while today is still to play: a streak is
+     * not broken until the day it would be missed is over.
+     */
+    static int streak(final List<LocalDate> playedNewestFirst, final LocalDate today) {
+        LocalDate expected = playedNewestFirst.contains(today) ? today : today.minusDays(1);
+        int streak = 0;
+        for (LocalDate played : playedNewestFirst) {
+            if (played.isAfter(expected)) continue;
+            if (!played.equals(expected)) break;
+            streak++;
+            expected = expected.minusDays(1);
+        }
+        return streak;
     }
 
     /** Today's questions, once: a second go would only be practice, and it would not count. */
@@ -89,7 +114,7 @@ public class DailyChallengeService {
     public QuizDto quiz() {
         Long quizId = days.quizIdFor(LocalDate.now(clock));
         if (historyRepository.findFirstByQuiz_QuizIdAndAccount_AccountIdOrderByHistoryIdAsc(quizId, currentAccountId()).isPresent()) {
-            throw new IllegalArgumentException("You have played today's challenge; a new one starts tomorrow");
+            throw new IllegalArgumentException(ServerText.t("err_daily_challenge_played", "You have played today's challenge; a new one starts tomorrow"));
         }
         return quizService.replay(quizId);
     }

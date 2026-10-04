@@ -21,7 +21,9 @@ public record PublicProfile(Long id,
                             TrophyFace trophy,
                             List<String> occupations,
                             List<String> favoriteCategories,
-                            IqResult iq) {
+                            IqResult iq,
+                            String frame,
+                            String nameColor) {
 
     public static PublicProfile of(final Account account, final TrophyFace trophy, final IqResult iq) {
         return new PublicProfile(account.getAccountId(),
@@ -34,6 +36,8 @@ public record PublicProfile(Long id,
                 trophy,
                 account.getOccupations().stream().map(UserOccupation::getName).sorted().toList(),
                 account.getFavoriteCategories().stream().map(Category::getName).sorted().toList(),
-                iq);
+                iq,
+                account.getEquippedFrame(),
+                com.play.quiz.cosmetic.Cosmetic.colorOf(account.getEquippedNameColor()));
     }
 }

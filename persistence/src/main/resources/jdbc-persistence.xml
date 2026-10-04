@@ -132,6 +132,10 @@
                         ,u.best_streak
                         ,u.coins
                         ,u.streak_freezes
+                        ,u.tour_seen
+                        ,u.profile_visibility
+                        ,u.equipped_frame
+                        ,u.equipped_name_color
                         ,u.created_date
                         ,u.updated_date
                         ,l.lang_id
@@ -215,6 +219,8 @@
                         ,u.is_enabled
                         ,u.birthday
                         ,u.name
+                        ,u.surname
+                        ,u.username
                         ,r.role_id
                         ,r.name as ROLE_NAME
                      FROM Q_USER u

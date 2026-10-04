@@ -18,6 +18,7 @@ import com.play.quiz.repository.QuizTypeRepository;
 import com.play.quiz.service.CategoryService;
 import com.play.quiz.service.QuestionService;
 import com.play.quiz.service.QuizService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,6 @@ import static com.play.quiz.util.Constant.EXPRESS_QUIZ_DEFAULT_TIME_SECONDS;
 @RequiredArgsConstructor
 public class QuizServiceImpl implements QuizService {
 
-    private static final Long EXPRESS_CATEGORY_ID = 1L;
     // However long a player asks for, one quiz never runs past this.
     private static final int MAX_QUIZ_LENGTH = 50;
 
@@ -67,7 +67,7 @@ public class QuizServiceImpl implements QuizService {
     private static void handleQuestionDiscrepancy(final QuizDto quizDto, final List<Question> questions) {
         // Nothing to repeat: without this getFirst() throws and the player sees a bare 500.
         if (questions.isEmpty() && quizDto.getQuestionsCount() > 0) {
-            throw new IllegalArgumentException("This category has no questions yet");
+            throw new IllegalArgumentException(ServerText.t("err_category_no_questions", "This category has no questions yet"));
         }
         while (questions.size() < quizDto.getQuestionsCount()) {
             Collections.shuffle(questions);
@@ -115,7 +115,6 @@ public class QuizServiceImpl implements QuizService {
     public QuizDto getExpressQuiz(final String email) {
         int count = propertyRepository.findByName(DEFAULT_EXPRESS_QUESTIONS_COUNT).getIntValue();
         int quizTime = propertyRepository.findByName(EXPRESS_QUIZ_DEFAULT_TIME_SECONDS).getIntValue();
-        CategoryDto category = categoryService.getById(EXPRESS_CATEGORY_ID, null);
 
         // Half at most, so the quiz stays general knowledge with a lean, not a quiz on one topic.
         List<Question> questions = new ArrayList<>(Objects.isNull(email)
@@ -127,7 +126,8 @@ public class QuizServiceImpl implements QuizService {
                 .forEach(questions::add);
         log.debug("Express quiz: {} of {} questions, {} from occupation", questions.size(), count, taken.size());
 
-        return createQuiz(quizTime, questions.size(), null, category, questions);
+        // No category: it is general knowledge, and is stored that way (see the CAT_ID migration).
+        return createQuiz(quizTime, questions.size(), null, null, questions);
     }
 
     @Override
@@ -137,16 +137,17 @@ public class QuizServiceImpl implements QuizService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new RecordNotFoundException("No quiz with id: " + quizId));
         if (quiz.isCustom()) {
-            throw new IllegalArgumentException("A custom quiz is played from its own page");
+            throw new IllegalArgumentException(ServerText.t("err_custom_quiz_own_page", "A custom quiz is played from its own page"));
         }
         // The ids are stored as a set, so a fixed order: shuffle, or every replay asks them the same way.
         List<Question> questions = quiz.getQuestionIds().stream()
                 .<Question>map(id -> Question.builder().questionId(id).build())
                 .collect(Collectors.toCollection(ArrayList::new));
         Collections.shuffle(questions);
-        Long categoryId = Objects.nonNull(quiz.getCategory()) ? quiz.getCategory().getCatId() : EXPRESS_CATEGORY_ID;
+        CategoryDto category = Objects.nonNull(quiz.getCategory())
+                ? categoryService.getById(quiz.getCategory().getCatId(), null) : null;
 
-        return createQuiz(0, questions.size(), quiz.getType(), categoryService.getById(categoryId, null), questions)
+        return createQuiz(0, questions.size(), quiz.getType(), category, questions)
                 .toBuilder()
                 .quizId(quizId)
                 .build();
@@ -157,7 +158,6 @@ public class QuizServiceImpl implements QuizService {
     public Long storeGeneralKnowledgeQuiz(final int questionCount) {
         List<Question> questions = questionService.getGeneralKnowledgeQuestions(questionCount);
         Quiz quiz = quizRepository.save(Quiz.builder()
-                .category(Category.builder().catId(EXPRESS_CATEGORY_ID).build())
                 // Q_QUIZ.TYPE is NOT NULL: the platform's own type, as a quiz played with no filter gets.
                 .type(quizTypeRepository.findById(1L).orElse(null))
                 .questionIds(getQuestionIds(questions))
@@ -165,6 +165,20 @@ public class QuizServiceImpl implements QuizService {
                 .createdDate(LocalDateTime.now())
                 .build());
         log.info("Stored general knowledge quiz id: {} with {} questions", quiz.getQuizId(), questions.size());
+        return quiz.getQuizId();
+    }
+
+    @Override
+    @Transactional
+    public Long storeQuestionsQuiz(final Set<Long> questionIds) {
+        Quiz quiz = quizRepository.save(Quiz.builder()
+                // Q_QUIZ.TYPE is NOT NULL: the platform's own type, as a quiz played with no filter gets.
+                .type(quizTypeRepository.findById(1L).orElse(null))
+                .questionIds(questionIds)
+                .questionsCount(questionIds.size())
+                .createdDate(LocalDateTime.now())
+                .build());
+        log.info("Stored quiz id: {} of {} given questions", quiz.getQuizId(), questionIds.size());
         return quiz.getQuizId();
     }
 

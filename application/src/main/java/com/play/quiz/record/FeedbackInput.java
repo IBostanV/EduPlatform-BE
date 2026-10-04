@@ -12,6 +12,6 @@ import jakarta.validation.constraints.Size;
 public record FeedbackInput(@NotNull FeedbackType type,
                             @NotBlank @Size(max = 2000) String message,
                             @Size(max = 500) String page,
-                            @Size(max = 1100) String question,
+                            @Size(max = 4000) String question,
                             @Email @Size(max = 254) String contactEmail) {
 }

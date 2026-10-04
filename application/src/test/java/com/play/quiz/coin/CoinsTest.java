@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,8 @@ class CoinsTest {
 
     private static final long ACCOUNT_ID = 7L;
     private static final String EMAIL = "me@playquiz.io";
+    // As far from UTC as a zone gets, so its date differs from the server's much of the day.
+    private static final ZoneId ZONE = ZoneId.of("Pacific/Kiritimati");
 
     @Mock private AccountRepository accountRepository;
     @Mock private AuthenticationFacade authenticationFacade;
@@ -52,7 +55,7 @@ class CoinsTest {
 
     private void lastSeen(final int daysAgo, final int streak, final int freezes) {
         Account account = Account.builder().accountId(ACCOUNT_ID).email(EMAIL)
-                .lastSeenDate(LocalDate.now().minusDays(daysAgo)).loginStreak(streak).streakFreezes(freezes).build();
+                .lastSeenDate(LocalDate.now(ZONE).minusDays(daysAgo)).loginStreak(streak).streakFreezes(freezes).build();
         when(userRepository.findUserByEmail(EMAIL)).thenReturn(Optional.of(account));
         when(accountRepository.recordVisit(eq(ACCOUNT_ID), any(), anyInt())).thenReturn(1);
         when(accountRepository.findExperience(ACCOUNT_ID)).thenReturn(100);
@@ -61,24 +64,24 @@ class CoinsTest {
     @Test
     void given_one_missed_day_and_a_freeze_then_the_streak_goes_on() {
         lastSeen(2, 5, 1);
-        userServiceImpl.recordVisit(EMAIL);
-        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(), 6);
+        userServiceImpl.recordVisit(EMAIL, ZONE);
+        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(ZONE), 6);
         verify(accountRepository).useStreakFreezes(ACCOUNT_ID, 1);
     }
 
     @Test
     void given_two_missed_days_and_one_freeze_then_the_streak_starts_over() {
         lastSeen(3, 5, 1);
-        userServiceImpl.recordVisit(EMAIL);
-        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(), 1);
+        userServiceImpl.recordVisit(EMAIL, ZONE);
+        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(ZONE), 1);
         verify(accountRepository, never()).useStreakFreezes(anyLong(), anyInt());
     }
 
     @Test
     void given_yesterday_then_no_freeze_is_used() {
         lastSeen(1, 5, 2);
-        userServiceImpl.recordVisit(EMAIL);
-        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(), 6);
+        userServiceImpl.recordVisit(EMAIL, ZONE);
+        verify(accountRepository).recordVisit(ACCOUNT_ID, LocalDate.now(ZONE), 6);
         verify(accountRepository, never()).useStreakFreezes(anyLong(), anyInt());
     }
 

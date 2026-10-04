@@ -1,7 +1,6 @@
 ========================================================================================================================
 Starting points:
     1) To run PQ-Backend you should create a new in the Oracle database:
-        CREATE USER gnosis IDENTIFIED BY admin;
         GRANT DBA TO gnosis;
         
         GRANT CREATE SESSION TO gnosis;
@@ -16,7 +15,6 @@ Starting points:
         #Database
         spring.datasource.url=jdbc:oracle:thin:@//localhost:1521/XEPDB1
         spring.datasource.username=gnosis
-        spring.datasource.password=admin
         
         #Email
         spring.mail.username=play.quiz.10@gmail.com
