@@ -13,25 +13,38 @@
     <artifactId>persistence</artifactId>
 
     <properties>
-        <ojdbc8.version>19.8.0.0</ojdbc8.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <!-- Same versions Spring Boot gives the application -->
+        <flyway.version>11.7.2</flyway.version>
+        <postgresql.version>42.7.11</postgresql.version>
     </properties>
 
     <build>
         <plugins>
+            <!-- mvn -pl persistence flyway:info|migrate|repair -Dflyway.password=...
+                 Another database: -Dflyway.url=jdbc:postgresql://localhost:5432/playquiz_test. The application runs the same migrations on startup. -->
             <plugin>
-                <groupId>org.mybatis.maven</groupId>
-                <artifactId>migrations-maven-plugin</artifactId>
-                <version>1.1.4</version>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>${flyway.version}</version>
                 <configuration>
-                    <repository>../persistence/src/main/resources/migrations</repository>
+                    <url>jdbc:postgresql://localhost:5432/playquiz</url>
+                    <user>gnosis</user>
+                    <locations>
+                        <location>filesystem:${project.basedir}/src/main/resources/db/migration</location>
+                    </locations>
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>com.oracle.database.jdbc</groupId>
-                        <artifactId>ojdbc8</artifactId>
-                        <version>${ojdbc8.version}</version>
+                        <groupId>org.flywaydb</groupId>
+                        <artifactId>flyway-database-postgresql</artifactId>
+                        <version>${flyway.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${postgresql.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>

@@ -109,4 +109,11 @@ class CoinsTest {
 
         assertThrows(IllegalArgumentException.class, () -> coins.buyHint(1L, List.of(10L, 20L, 30L, 40L)));
     }
+
+    @Test
+    void given_more_pairs_games_with_the_same_player_then_each_win_pays_half_the_last() {
+        assertEquals(List.of(15, 7, 3, 1, 0, 0), java.util.stream.IntStream.rangeClosed(1, 6)
+                .mapToObj(Coins::pairsWin).toList());
+        assertEquals(0, Coins.pairsWin(100));
+    }
 }

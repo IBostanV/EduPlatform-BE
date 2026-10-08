@@ -13,10 +13,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import com.play.quiz.controller.RestEndpoint;
 import com.play.quiz.domain.Account;
 import com.play.quiz.dto.QuizDto;
 import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.feed.FeedItem;
+import com.play.quiz.live.LiveService;
 import com.play.quiz.record.UserSummary;
 import com.play.quiz.repository.AccountRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
@@ -26,6 +28,7 @@ import com.play.quiz.service.UserService;
 import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,7 @@ public class DuelService {
     private final QuizService quizService;
     private final UserService userService;
     private final AuthenticationFacade authenticationFacade;
+    private final SimpMessagingTemplate messaging;
 
     public record RoundView(int no, DuelRules.Score challenger, DuelRules.Score opponent) {}
 
@@ -92,6 +96,11 @@ public class DuelService {
                 .opponentId(opponentId)
                 .createdDate(LocalDateTime.now())
                 .build());
+        // Told at once, on whatever page they are on (a toast); the bell has it as well.
+        LiveService.LiveEvent invite = new LiveService.LiveEvent("DUEL_INVITE", null, null, null,
+                UserSummary.of(accountRepository.findById(me).orElseThrow()), null);
+        accountRepository.findById(opponentId).ifPresent(opponent ->
+                messaging.convertAndSendToUser(opponent.getEmail(), RestEndpoint.WS_BROKER_LIVE, invite));
         log.info("Account {} started duel {} with {}", me, duel.getDuelId(), opponentId);
         return views(List.of(duel), me).getFirst();
     }

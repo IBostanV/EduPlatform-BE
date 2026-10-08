@@ -29,7 +29,7 @@ public interface DailyChallengeRepository extends JpaRepository<DailyChallenge, 
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_DAILY_CHALLENGE (CHALLENGE_DAY, QUIZ_ID)
-            SELECT :day, :quizId FROM dual
+            SELECT :day, :quizId
             WHERE NOT EXISTS (SELECT 1 FROM Q_DAILY_CHALLENGE WHERE CHALLENGE_DAY = :day)
             """)
     int claimDay(LocalDate day, Long quizId);

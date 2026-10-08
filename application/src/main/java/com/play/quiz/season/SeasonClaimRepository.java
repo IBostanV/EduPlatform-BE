@@ -26,7 +26,7 @@ public interface SeasonClaimRepository extends JpaRepository<SeasonClaim, Season
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_SEASON_CLAIM (ACCOUNT_ID, CODE, PERIOD_START, POINTS, CLAIMED_DATE)
-            SELECT :accountId, :code, :periodStart, :points, SYSDATE FROM dual
+            SELECT :accountId, :code, :periodStart, :points, LOCALTIMESTAMP
             WHERE NOT EXISTS (SELECT 1 FROM Q_SEASON_CLAIM
                 WHERE ACCOUNT_ID = :accountId AND CODE = :code AND PERIOD_START = :periodStart)
             """)

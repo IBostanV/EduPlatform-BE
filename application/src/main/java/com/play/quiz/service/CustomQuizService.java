@@ -2,7 +2,6 @@ package com.play.quiz.service;
 
 import java.util.List;
 
-import com.google.gson.JsonArray;
 import com.play.quiz.domain.Quiz;
 import com.play.quiz.dto.CustomQuizDto;
 import com.play.quiz.dto.CustomQuizPlayDto;
@@ -34,5 +33,5 @@ public interface CustomQuizService {
     void delete(final Long quizId);
 
     /** A played run's answers (the saved answersJson) judged question by question. */
-    List<HistoryAnswer> score(final Quiz quiz, final JsonArray userAnswers);
+    List<HistoryAnswer> score(final Quiz quiz, final String answersJson);
 }

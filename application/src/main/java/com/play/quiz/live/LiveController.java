@@ -26,6 +26,8 @@ public class LiveController {
 
     public record AnswerInput(int index, AnswerDto answer) {}
 
+    public record FlipInput(int card) {}
+
     @PostMapping(value = "/rooms", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LiveService.RoomView> create(@RequestBody final LiveService.CreateInput input) {
         return ResponseEntity.ok(liveService.create(input));
@@ -53,6 +55,11 @@ public class LiveController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/rooms/{code}/again", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<LiveService.RoomView> again(@PathVariable final String code) {
+        return ResponseEntity.ok(liveService.again(code));
+    }
+
     @PostMapping(value = "/rooms/{code}/start", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LiveService.RoomView> start(@PathVariable final String code) {
         return ResponseEntity.ok(liveService.start(code));
@@ -63,5 +70,11 @@ public class LiveController {
     public ResponseEntity<LiveService.RoomView> answer(@PathVariable final String code,
                                                        @RequestBody final AnswerInput input) {
         return ResponseEntity.ok(liveService.answer(code, input.index(), input.answer()));
+    }
+
+    @PostMapping(value = "/rooms/{code}/flip", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<LiveService.RoomView> flip(@PathVariable final String code, @RequestBody final FlipInput input) {
+        return ResponseEntity.ok(liveService.flip(code, input.card()));
     }
 }

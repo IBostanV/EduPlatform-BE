@@ -14,9 +14,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.CustomAnswer;
 import com.play.quiz.domain.CustomQuestion;
@@ -45,6 +44,7 @@ import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.CustomQuizService;
 import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -247,11 +247,12 @@ public class CustomQuizServiceImpl implements CustomQuizService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<HistoryAnswer> score(final Quiz quiz, final JsonArray userAnswers) {
+    @SneakyThrows
+    public List<HistoryAnswer> score(final Quiz quiz, final String answersJson) {
         // The saved answers: one {"<questionId>": {"answer": …, "time": …}} object per question answered.
-        Map<Long, JsonObject> picks = new HashMap<>();
-        userAnswers.forEach(element -> element.getAsJsonObject().entrySet()
-                .forEach(entry -> picks.put(Long.valueOf(entry.getKey()), entry.getValue().getAsJsonObject())));
+        Map<Long, JsonNode> picks = new HashMap<>();
+        new ObjectMapper().readTree(answersJson).forEach(element -> element.properties()
+                .forEach(entry -> picks.put(Long.valueOf(entry.getKey()), entry.getValue())));
 
         String quizTypeName = quiz.getType().getName();
         return questionsOf(quiz).stream()
@@ -259,7 +260,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
                 .toList();
     }
 
-    private HistoryAnswer scoreQuestion(final CustomQuestion question, final JsonObject pick, final String quizTypeName) {
+    private HistoryAnswer scoreQuestion(final CustomQuestion question, final JsonNode pick, final String quizTypeName) {
         List<CustomAnswer> rightAnswers = question.getAnswers().stream().filter(CustomAnswer::isRight).toList();
         String separator = IN_ORDER.equals(quizTypeName) ? " → " : ", ";
         String rightText = rightAnswers.stream().map(CustomAnswer::getContent).collect(Collectors.joining(separator));
@@ -269,20 +270,20 @@ public class CustomQuizServiceImpl implements CustomQuizService {
             return new HistoryAnswer(0, question.getContent(), null, rightText);
         }
 
-        double time = pick.get("time").getAsDouble();
-        JsonElement answer = pick.get("answer");
+        double time = pick.get("time").asDouble();
+        JsonNode answer = pick.get("answer");
 
         if (INPUT.equals(quizTypeName)) {
-            String typed = answer.getAsString().trim();
+            String typed = answer.asText().trim();
             boolean right = rightAnswers.stream().anyMatch(option -> option.getContent().trim().equalsIgnoreCase(typed));
             return new HistoryAnswer(time, question.getContent(), typed, right ? null : rightText);
         }
 
         List<Long> picked = new ArrayList<>();
-        if (answer.isJsonArray()) {
-            answer.getAsJsonArray().forEach(id -> picked.add(id.getAsLong()));
+        if (answer.isArray()) {
+            answer.forEach(id -> picked.add(id.asLong()));
         } else {
-            picked.add(answer.getAsLong());
+            picked.add(answer.asLong());
         }
         // Already in the order written, so these are also the right order.
         List<Long> rightIds = rightAnswers.stream().map(CustomAnswer::getAnswerId).toList();

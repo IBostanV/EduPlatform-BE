@@ -19,7 +19,7 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Long
     @Query(value = """
             SELECT * FROM Q_ANNOUNCEMENT
              WHERE ANNOUNCEMENT_ID > (SELECT ANNOUNCEMENT_SEEN_ID FROM Q_USER WHERE ACCOUNT_ID = :accountId)
-               AND CREATED_DATE > SYSDATE - 30
+               AND CREATED_DATE > LOCALTIMESTAMP - INTERVAL '30 days'
              ORDER BY ANNOUNCEMENT_ID
             """, nativeQuery = true)
     List<Announcement> findUnseen(Long accountId);

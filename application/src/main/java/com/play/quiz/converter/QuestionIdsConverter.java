@@ -22,8 +22,8 @@ public class QuestionIdsConverter implements AttributeConverter<Set<Long>, Strin
 
     @Override
     public Set<Long> convertToEntityAttribute(String databaseIds) {
-        // Oracle keeps the empty list as NULL.
-        if (Objects.isNull(databaseIds)) {
+        // An empty list is stored as '' (Oracle used to turn that into NULL).
+        if (Objects.isNull(databaseIds) || databaseIds.isBlank()) {
             return new HashSet<>();
         }
         List<String> stringList = Arrays.asList(databaseIds.split(SPLIT_CHAR));

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,6 +41,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("UPDATE Account a SET a.experience = COALESCE(a.experience, 0) + :amount WHERE a.accountId = :accountId")
     void addExperience(Long accountId, int amount);
 
+    // Transactional for callers that have none of their own (a pairs win, paid from LiveService).
+    @Transactional
     @Modifying
     @Query("UPDATE Account a SET a.coins = a.coins + :amount WHERE a.accountId = :accountId")
     void addCoins(Long accountId, int amount);
@@ -97,9 +100,13 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      * <p>Numbers rather than longs: Oracle hands a native NUMERIC back as a BigDecimal.
      */
     @Query(nativeQuery = true, value = """
-            SELECT DISTINCT c.CAT_ID FROM Q_CATEGORY c
-            START WITH c.CAT_ID IN (SELECT uc.CAT_ID FROM Q_USER_CATEGORY uc WHERE uc.ACCOUNT_ID = :accountId)
-            CONNECT BY NOCYCLE PRIOR c.CAT_ID = c.SUBCATEGORY_ID
+            WITH RECURSIVE tree (CAT_ID) AS (
+                SELECT c.CAT_ID FROM Q_CATEGORY c
+                WHERE c.CAT_ID IN (SELECT uc.CAT_ID FROM Q_USER_CATEGORY uc WHERE uc.ACCOUNT_ID = :accountId)
+                UNION
+                SELECT c.CAT_ID FROM Q_CATEGORY c JOIN tree t ON c.SUBCATEGORY_ID = t.CAT_ID
+            )
+            SELECT CAT_ID FROM tree
             """)
     List<Number> findFavoriteCategoryTreeIds(Long accountId);
 
@@ -132,9 +139,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     /** Every active player with some experience or a streak: the level and streak leaderboards. */
     @Query(nativeQuery = true, value = """
-            SELECT ACCOUNT_ID AS accountId, NVL(EXPERIENCE, 0) AS experience, NVL(BEST_STREAK, 0) AS bestStreak
+            SELECT ACCOUNT_ID AS accountId, COALESCE(EXPERIENCE, 0) AS experience, COALESCE(BEST_STREAK, 0) AS bestStreak
             FROM Q_USER
-            WHERE NVL(IS_BLOCKED, 0) = 0 AND (NVL(EXPERIENCE, 0) > 0 OR NVL(BEST_STREAK, 0) > 0)
+            WHERE NOT COALESCE(IS_BLOCKED, FALSE) AND (COALESCE(EXPERIENCE, 0) > 0 OR COALESCE(BEST_STREAK, 0) > 0)
             """)
     List<PlayerStanding> findStandings();
 
@@ -174,7 +181,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_USER_FRIEND (USER_ID, FRIEND_ID, CREATED_BY, CREATED_DATE)
-            SELECT :userId, :friendId, :userId, SYSDATE FROM dual
+            SELECT :userId, :friendId, :userId, LOCALTIMESTAMP
             WHERE NOT EXISTS (SELECT 1 FROM Q_USER_FRIEND WHERE USER_ID = :userId AND FRIEND_ID = :friendId)
             """)
     void addFriend(Long userId, Long friendId);

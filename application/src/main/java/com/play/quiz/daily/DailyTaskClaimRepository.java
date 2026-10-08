@@ -37,7 +37,7 @@ public interface DailyTaskClaimRepository extends JpaRepository<DailyTaskClaim, 
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO Q_DAILY_TASK (TASK_ID, ACCOUNT_ID, TASK_CODE, TASK_DAY, EXPERIENCE, CREATED_BY, CREATED_DATE)
-            SELECT daily_task_seq.NEXTVAL, :accountId, :code, :day, :experience, :accountId, SYSDATE FROM dual
+            SELECT nextval('daily_task_seq'), :accountId, :code, :day, :experience, :accountId, LOCALTIMESTAMP
             WHERE NOT EXISTS (SELECT 1 FROM Q_DAILY_TASK
                 WHERE ACCOUNT_ID = :accountId AND TASK_CODE = :code AND TASK_DAY = :day)
             """)

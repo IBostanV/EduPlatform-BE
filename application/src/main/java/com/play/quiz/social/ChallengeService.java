@@ -12,11 +12,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.play.quiz.controller.RestEndpoint;
 import com.play.quiz.domain.Account;
 import com.play.quiz.domain.UserQuizHistory;
 import com.play.quiz.dto.QuizDto;
 import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.feed.FeedItem;
+import com.play.quiz.live.LiveService;
 import com.play.quiz.record.UserSummary;
 import com.play.quiz.repository.AccountRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
@@ -27,6 +29,7 @@ import com.play.quiz.util.ServerText;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +52,7 @@ public class ChallengeService {
     private final UserService userService;
     private final QuizService quizService;
     private final AuthenticationFacade authenticationFacade;
+    private final SimpMessagingTemplate messaging;
 
     public record Score(int rightAnswers, int totalAnswers, Double spentTime, LocalDateTime at) {
         static Score of(final UserQuizHistory run) {
@@ -115,6 +119,10 @@ public class ChallengeService {
                     .createdDate(LocalDateTime.now())
                     .build()));
         }
+        // Told at once, on whatever page they are on (a toast); the bell has it as well.
+        LiveService.LiveEvent invite = new LiveService.LiveEvent("CHALLENGE", null, null, null, UserSummary.of(me), null);
+        accountRepository.findAllById(sent.stream().map(Challenge::getOpponentId).toList())
+                .forEach(friend -> messaging.convertAndSendToUser(friend.getEmail(), RestEndpoint.WS_BROKER_LIVE, invite));
         log.info("Account {} challenged {} to quiz {}: {} sent, the rest already challenged",
                 me.getAccountId(), friendIds, quizId, sent.stream().map(Challenge::getOpponentId).toList());
         return views(sent);

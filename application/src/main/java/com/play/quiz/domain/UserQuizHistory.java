@@ -11,7 +11,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.SequenceGenerator;
@@ -45,7 +44,6 @@ public class UserQuizHistory extends BaseEntity {
     @JoinColumn(name = "QUIZ_ID")
     private Quiz quiz;
 
-    @Lob
     @Column(name = "ANSWERS_JSON")
     private String answersJson;
 

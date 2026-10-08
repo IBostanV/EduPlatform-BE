@@ -38,7 +38,7 @@ public interface GlossaryRepository extends JpaRepository<Glossary, Long> {
 
     // Random order, so a question gets different wrong options each time instead of the same first rows.
     @Query("SELECT g FROM Glossary g WHERE g.type = :type AND g.isActive = TRUE AND g.termId NOT IN :excludedTermIds"
-            + " ORDER BY FUNCTION('DBMS_RANDOM.VALUE')")
+            + " ORDER BY FUNCTION('random')")
     List<Glossary> findWrongOptions(final GlossaryType type, final List<Long> excludedTermIds, Pageable pageable);
 
     Optional<Glossary> findByKey(String key);
@@ -49,12 +49,13 @@ public interface GlossaryRepository extends JpaRepository<Glossary, Long> {
     @Query("SELECT COUNT(g) FROM Glossary g WHERE g.parent.termId = :termId")
     long countChildren(Long termId);
 
-    @Query(value = "SELECT qg.*" +
-            " FROM q_glossary qg" +
-            " WHERE cat_id IN (SELECT cat_id " +
-            "                  FROM q_category " +
-            "                  START WITH cat_id = :categoryId" +
-            "                  CONNECT BY PRIOR cat_id = subcategory_id)",
-            nativeQuery = true)
+    @Query(value = """
+            WITH RECURSIVE tree (CAT_ID) AS (
+                SELECT c.CAT_ID FROM Q_CATEGORY c WHERE c.CAT_ID = :categoryId
+                UNION
+                SELECT c.CAT_ID FROM Q_CATEGORY c JOIN tree t ON c.SUBCATEGORY_ID = t.CAT_ID
+            )
+            SELECT qg.* FROM Q_GLOSSARY qg WHERE qg.CAT_ID IN (SELECT CAT_ID FROM tree)
+            """, nativeQuery = true)
     Optional<List<Glossary>> findHierarchicalByCategoryId(final Long categoryId);
 }

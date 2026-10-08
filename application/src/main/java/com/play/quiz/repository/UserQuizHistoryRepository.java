@@ -81,9 +81,9 @@ public interface UserQuizHistoryRepository extends JpaRepository<UserQuizHistory
             SELECT ACCOUNT_ID AS accountId, RIGHT_ANSWERS AS rightAnswers, TOTAL_ANSWERS AS totalAnswers,
                    SPENT_TIME AS spentTime
             FROM (SELECT h.*, ROW_NUMBER() OVER (PARTITION BY h.ACCOUNT_ID ORDER BY h.HISTORY_ID) AS nth
-                  FROM Q_USER_HISTORY h WHERE h.QUIZ_ID = :quizId AND h.TOTAL_ANSWERS IS NOT NULL)
+                  FROM Q_USER_HISTORY h WHERE h.QUIZ_ID = :quizId AND h.TOTAL_ANSWERS IS NOT NULL) runs
             WHERE nth = 1
-            ORDER BY RIGHT_ANSWERS DESC, NVL(SPENT_TIME, 0) ASC, HISTORY_ID ASC
+            ORDER BY RIGHT_ANSWERS DESC, COALESCE(SPENT_TIME, 0) ASC, HISTORY_ID ASC
             """)
     List<FirstRun> findFirstRuns(Long quizId);
 
@@ -97,8 +97,8 @@ public interface UserQuizHistoryRepository extends JpaRepository<UserQuizHistory
             FROM Q_USER_HISTORY h
             JOIN Q_QUIZ q ON q.QUIZ_ID = h.QUIZ_ID
             JOIN Q_USER u ON u.ACCOUNT_ID = h.ACCOUNT_ID
-            WHERE h.TOTAL_ANSWERS IS NOT NULL AND q.IS_CUSTOM = 0 AND NVL(u.IS_BLOCKED, 0) = 0
-              AND NVL(h.COMPLETED_DATE, h.CREATED_DATE) >= :since
+            WHERE h.TOTAL_ANSWERS IS NOT NULL AND q.IS_CUSTOM = FALSE AND NOT COALESCE(u.IS_BLOCKED, FALSE)
+              AND COALESCE(h.COMPLETED_DATE, h.CREATED_DATE) >= :since
             GROUP BY h.ACCOUNT_ID
             """)
     List<PlayerTotals> findPlayerTotalsSince(LocalDateTime since);

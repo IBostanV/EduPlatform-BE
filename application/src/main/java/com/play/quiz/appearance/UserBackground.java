@@ -7,7 +7,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,7 +31,6 @@ public class UserBackground {
     @Column(name = "CONTENT_TYPE")
     private String contentType;
 
-    @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(name = "IMAGE")
     private byte[] image;
