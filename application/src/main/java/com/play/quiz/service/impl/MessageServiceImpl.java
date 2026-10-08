@@ -12,6 +12,7 @@ import com.play.quiz.repository.MessageRepository;
 import com.play.quiz.repository.UserGroupRepository;
 import com.play.quiz.service.MessageService;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
@@ -56,7 +57,7 @@ public class MessageServiceImpl implements MessageService {
     public List<MessageDto> fetchMessageHistory(Long destination, String principalName) {
         if (Objects.nonNull(destination)) {
             if (!userGroupRepository.isMember(destination, principalName)) {
-                throw new AccessDeniedException("Not a member of group " + destination);
+                throw new AccessDeniedException(ServerText.t("err_not_group_member", "Not a member of group {{id}}", "id", destination));
             }
             List<Message> messages = messageRepository.findByDestination_GroupId(destination);
             return withSenders(messageMapper.toDtoList(messages));
@@ -124,7 +125,7 @@ public class MessageServiceImpl implements MessageService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new RecordNotFoundException("No message with id: " + messageId));
         if (!Objects.equals(message.getSource(), principalName)) {
-            throw new AccessDeniedException("Only the author can change message " + messageId);
+            throw new AccessDeniedException(ServerText.t("err_message_change_denied", "Only the author can change message {{id}}", "id", messageId));
         }
         return message;
     }
@@ -167,10 +168,10 @@ public class MessageServiceImpl implements MessageService {
     private static String clean(final String html) {
         String cleaned = html == null ? "" : Jsoup.clean(html, MESSAGE_HTML);
         if (Jsoup.parse(cleaned).text().isBlank()) {
-            throw new IllegalArgumentException("A message cannot be empty");
+            throw new IllegalArgumentException(ServerText.t("err_message_empty", "A message cannot be empty"));
         }
         if (cleaned.length() > MAX_CONTENT_LENGTH) {
-            throw new IllegalArgumentException("A message can be at most " + MAX_CONTENT_LENGTH + " characters long");
+            throw new IllegalArgumentException(ServerText.t("err_message_too_long", "A message can be at most {{max}} characters long", "max", MAX_CONTENT_LENGTH));
         }
         return cleaned;
     }

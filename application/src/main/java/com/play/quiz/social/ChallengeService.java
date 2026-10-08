@@ -23,6 +23,7 @@ import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.QuizService;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.ServerText;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -85,13 +86,13 @@ public class ChallengeService {
         UserQuizHistory run = historyRepository.findById(historyId)
                 .orElseThrow(() -> new RecordNotFoundException("No quiz run with id: " + historyId));
         if (!Objects.equals(run.getAccount().getAccountId(), me.getAccountId())) {
-            throw new IllegalArgumentException("That quiz run is not yours");
+            throw new IllegalArgumentException(ServerText.t("err_run_not_yours", "That quiz run is not yours"));
         }
         if (Objects.isNull(run.getTotalAnswers())) {
-            throw new IllegalArgumentException("That quiz run has no score to beat");
+            throw new IllegalArgumentException(ServerText.t("err_run_no_score_to_beat", "That quiz run has no score to beat"));
         }
         if (run.getQuiz().isCustom()) {
-            throw new IllegalArgumentException("A custom quiz is shared by inviting friends to it");
+            throw new IllegalArgumentException(ServerText.t("err_custom_quiz_share", "A custom quiz is shared by inviting friends to it"));
         }
 
         Set<Long> friends = accountRepository.findFriends(me.getAccountId()).stream()
@@ -101,7 +102,7 @@ public class ChallengeService {
         List<Challenge> sent = new ArrayList<>();
         for (Long friendId : new HashSet<>(friendIds)) {
             if (!friends.contains(friendId)) {
-                throw new IllegalArgumentException("You can only challenge your friends");
+                throw new IllegalArgumentException(ServerText.t("err_challenge_only_friends", "You can only challenge your friends"));
             }
             if (challengeRepository.existsByQuizIdAndOpponentId(quizId, friendId)) {
                 continue;
@@ -136,7 +137,7 @@ public class ChallengeService {
         Challenge challenge = challengeRepository.findById(challengeId)
                 .orElseThrow(() -> new RecordNotFoundException("No challenge with id: " + challengeId));
         if (!me.equals(challenge.getOpponentId()) && !me.equals(challenge.getChallengerId())) {
-            throw new IllegalArgumentException("That challenge is not yours");
+            throw new IllegalArgumentException(ServerText.t("err_challenge_not_yours", "That challenge is not yours"));
         }
         return quizService.replay(challenge.getQuizId());
     }

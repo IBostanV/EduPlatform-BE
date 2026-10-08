@@ -12,5 +12,7 @@ public interface ReactionRepository extends JpaRepository<Reaction, Long> {
 
     List<Reaction> findByItemKeyIn(Collection<String> itemKeys);
 
+    List<Reaction> findByAccountIdOrderByCreatedDateDesc(Long accountId);
+
     Optional<Reaction> findByAccountIdAndItemKeyAndKind(Long accountId, String itemKey, Reaction.Kind kind);
 }

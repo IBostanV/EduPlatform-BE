@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -59,7 +60,7 @@ public class ReactionService {
     @Transactional
     public List<Tally> toggle(final String key, final Reaction.Kind kind) {
         if (!KEY.matcher(key).matches()) {
-            throw new IllegalArgumentException("Not a news line: " + key);
+            throw new IllegalArgumentException(ServerText.t("err_not_news_line", "Not a news line: {{key}}", "key", key));
         }
         Long me = currentAccountId();
         reactionRepository.findByAccountIdAndItemKeyAndKind(me, key, kind).ifPresentOrElse(

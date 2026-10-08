@@ -20,6 +20,7 @@ import com.play.quiz.controller.RestEndpoint;
 import com.play.quiz.domain.Account;
 import com.play.quiz.dto.AnswerDto;
 import com.play.quiz.dto.QuestionDto;
+import com.play.quiz.dto.translation.QuestionTranslationDto;
 import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.live.LiveRoom.Mode;
 import com.play.quiz.live.LiveRoom.Phase;
@@ -32,6 +33,7 @@ import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.QuestionService;
 import com.play.quiz.service.UserService;
 import com.play.quiz.social.Presence;
+import com.play.quiz.util.ServerText;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -75,7 +77,7 @@ public class LiveService {
     public record PlayerView(UserSummary user, int score, int correct, boolean answered, Boolean lastCorrect,
                              int lastPoints, boolean left, boolean host) {}
 
-    public record QuestionView(Long id, String content, List<AnswerDto> answers) {}
+    public record QuestionView(Long id, String content, List<QuestionTranslationDto> translations, List<AnswerDto> answers) {}
 
     /**
      * @param endsAt    when the current phase runs out (epoch ms), 0 when nothing is timed
@@ -146,17 +148,17 @@ public class LiveService {
         Map<Long, Account> friends = accountRepository.findFriends(me.getAccountId()).stream()
                 .collect(Collectors.toMap(Account::getAccountId, account -> account, (first, second) -> first));
         if (!friends.keySet().containsAll(friendIds)) {
-            throw new IllegalArgumentException("You can only invite your friends");
+            throw new IllegalArgumentException(ServerText.t("err_invite_only_friends", "You can only invite your friends"));
         }
         if (mode == Mode.DUEL && friendIds.size() != 1) {
-            throw new IllegalArgumentException("A duel is against one friend");
+            throw new IllegalArgumentException(ServerText.t("err_duel_one_friend", "A duel is against one friend"));
         }
 
         Map<Long, Account> invite = new LinkedHashMap<>();
         friendIds.forEach(id -> invite.put(id, friends.get(id)));
         if (mode == Mode.ROOM && Objects.nonNull(input.groupId())) {
             if (!userGroupRepository.isMember(input.groupId(), me.getEmail())) {
-                throw new IllegalArgumentException("You are not in that group");
+                throw new IllegalArgumentException(ServerText.t("err_not_in_group", "You are not in that group"));
             }
             accountRepository.findAllById(userGroupRepository.findUserIdsByUserGroupId(input.groupId())).stream()
                     .filter(account -> !account.getAccountId().equals(me.getAccountId()))
@@ -192,7 +194,7 @@ public class LiveService {
         LiveRoom room = room(code);
         synchronized (room) {
             if (!room.players.containsKey(me) && !room.invited.containsKey(me)) {
-                throw new IllegalArgumentException("Join the room to see it");
+                throw new IllegalArgumentException(ServerText.t("err_join_room_first", "Join the room to see it"));
             }
             return view(room, me);
         }
@@ -212,13 +214,13 @@ public class LiveService {
                 return view(room, me.getAccountId());
             }
             if (room.phase != Phase.LOBBY) {
-                throw new IllegalArgumentException("That match has already started");
+                throw new IllegalArgumentException(ServerText.t("err_match_started_that", "That match has already started"));
             }
             if (room.mode == Mode.DUEL && !room.invited.containsKey(me.getAccountId())) {
-                throw new IllegalArgumentException("That duel is between two other players");
+                throw new IllegalArgumentException(ServerText.t("err_duel_other_players", "That duel is between two other players"));
             }
             if (room.players.size() >= room.maxPlayers) {
-                throw new IllegalArgumentException("That room is full");
+                throw new IllegalArgumentException(ServerText.t("err_room_full", "That room is full"));
             }
             room.invited.remove(me.getAccountId());
             room.declined.remove(me.getAccountId());
@@ -288,19 +290,19 @@ public class LiveService {
         List<QuestionDto> questions;
         synchronized (room) {
             if (!me.equals(room.hostId)) {
-                throw new IllegalArgumentException("Only the host starts the match");
+                throw new IllegalArgumentException(ServerText.t("err_only_host_starts", "Only the host starts the match"));
             }
             if (room.phase != Phase.LOBBY) {
-                throw new IllegalArgumentException("The match has already started");
+                throw new IllegalArgumentException(ServerText.t("err_match_started", "The match has already started"));
             }
             if (room.active().size() < 2) {
-                throw new IllegalArgumentException("Wait for someone to join first");
+                throw new IllegalArgumentException(ServerText.t("err_wait_for_player", "Wait for someone to join first"));
             }
         }
         // Outside the lock: a database read, and nothing in the room depends on it yet.
         questions = questionService.getMiniGameQuestions(room.questionCount);
         if (questions.isEmpty()) {
-            throw new IllegalArgumentException("There are no questions to play yet");
+            throw new IllegalArgumentException(ServerText.t("err_no_questions_yet", "There are no questions to play yet"));
         }
         synchronized (room) {
             if (room.phase != Phase.LOBBY) {
@@ -326,7 +328,7 @@ public class LiveService {
         synchronized (room) {
             Player player = room.players.get(me);
             if (player == null || player.left) {
-                throw new IllegalArgumentException("You are not playing in that match");
+                throw new IllegalArgumentException(ServerText.t("err_not_playing_match", "You are not playing in that match"));
             }
             if (room.phase != Phase.QUESTION || room.index != index || room.answers.containsKey(me)) {
                 // Too late, or twice: the answer that counted stands.
@@ -504,7 +506,7 @@ public class LiveService {
         QuestionDto current = room.index >= 0 && room.index < room.questions.size() && !room.over()
                 ? room.questions.get(room.index) : null;
         QuestionView question = current == null || room.phase == Phase.COUNTDOWN ? null
-                : new QuestionView(current.getId(), current.getContent(), current.getAnswers());
+                : new QuestionView(current.getId(), current.getContent(), current.getTranslations(), current.getAnswers());
 
         return new RoomView(room.code, room.mode.name(), room.phase.name(), room.hostId, viewer,
                 room.index, room.questions.isEmpty() ? room.questionCount : room.questions.size(), room.seconds,

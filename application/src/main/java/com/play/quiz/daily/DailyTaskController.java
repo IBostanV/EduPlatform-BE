@@ -2,11 +2,13 @@ package com.play.quiz.daily;
 
 import java.util.List;
 
+import com.play.quiz.controller.PlayerZone;
 import com.play.quiz.controller.RestEndpoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,7 +22,8 @@ public class DailyTaskController {
     private final DailyTaskService dailyTaskService;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<DailyTaskProgress>> getToday() {
-        return ResponseEntity.ok(dailyTaskService.getToday());
+    public ResponseEntity<List<DailyTaskProgress>> getToday(
+            @RequestHeader(value = PlayerZone.HEADER, required = false) String timeZone) {
+        return ResponseEntity.ok(dailyTaskService.getToday(PlayerZone.of(timeZone)));
     }
 }

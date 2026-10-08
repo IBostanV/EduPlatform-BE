@@ -281,6 +281,18 @@ public class QuestionServiceImpl implements QuestionService {
                 options.forEach(option -> option.setContent(option.getGlossaryKey()));
                 return options;
             }
+            // Matching pairs: the question's own terms only (filled-in wrong options have no id),
+            // each sent with its key and another one's value, so the pairs are not in what is sent.
+            case "DRAG_AND_DROP" -> {
+                options.removeIf(option -> Objects.isNull(option.getId()));
+                List<String> values = new ArrayList<>(options.stream().map(AnswerDto::getContent).toList());
+                Collections.shuffle(values);
+                for (int i = 0; i < options.size(); i++) {
+                    options.get(i).setContent(values.get(i));
+                    options.get(i).setId(null);
+                }
+                return options;
+            }
             default -> {
                 return options;
             }

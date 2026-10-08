@@ -15,6 +15,9 @@ public interface DailyTaskClaimRepository extends JpaRepository<DailyTaskClaim, 
     @Query("SELECT c.taskCode FROM DailyTaskClaim c WHERE c.accountId = :accountId AND c.taskDay = :day")
     List<String> findClaimedCodes(Long accountId, LocalDate day);
 
+    /** How many daily tasks this player finished between two days, both included: season points. */
+    long countByAccountIdAndTaskDayBetween(Long accountId, LocalDate from, LocalDate to);
+
     /**
      * The days on which this player was paid for every one of that day's tasks — a clean sweep,
      * which is a trophy. One row per such day, counted by the caller.

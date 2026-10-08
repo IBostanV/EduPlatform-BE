@@ -26,6 +26,7 @@ import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserService;
 import com.play.quiz.util.ExperiencePayout;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.PageRequest;
@@ -64,7 +65,7 @@ public class ConquestServiceImpl implements ConquestService {
     public ConquestState setTeam(final Long groupId) {
         Account player = currentAccount();
         if (Objects.nonNull(groupId) && !userGroupRepository.isMember(groupId, player.getEmail())) {
-            throw new IllegalArgumentException("You can only play for a group you are in");
+            throw new IllegalArgumentException(ServerText.t("err_conquest_not_your_group", "You can only play for a group you are in"));
         }
         accountRepository.setConquestTeam(player.getAccountId(), groupId);
         log.info("Account {} now plays conquest for group {}", player.getAccountId(), groupId);
@@ -80,28 +81,28 @@ public class ConquestServiceImpl implements ConquestService {
         Category country = country(countryId);
 
         if (!ConquestSchedule.isOpenAt(now)) {
-            throw new IllegalArgumentException("Conquest is closed today; it opens again "
-                    + ConquestSchedule.nextOpenAt(now));
+            throw new IllegalArgumentException(ServerText.t("err_conquest_closed", "Conquest is closed today; it opens again {{at}}",
+                    "at", ConquestSchedule.nextOpenAt(now)));
         }
         if (!openCountryIds(round).contains(countryId)) {
-            throw new IllegalArgumentException(country.getName() + " is not open this round");
+            throw new IllegalArgumentException(ServerText.t("err_country_not_open", "{{country}} is not open this round", "country", country.getName()));
         }
         cooldownLeft(countryId, player.getAccountId(), now).ifPresent(left -> {
-            throw new IllegalArgumentException("Another go at " + country.getName() + " in "
-                    + left.toHours() + "h " + left.toMinutesPart() + "m");
+            throw new IllegalArgumentException(ServerText.t("err_conquest_cooldown", "Another go at {{country}} in {{hours}}h {{minutes}}m",
+                    "country", country.getName(), "hours", left.toHours(), "minutes", left.toMinutesPart()));
         });
 
         UserQuizHistory run = historyRepository.findById(historyId)
                 .orElseThrow(() -> new RecordNotFoundException("No quiz run with id: " + historyId));
         if (!Objects.equals(run.getAccount().getAccountId(), player.getAccountId())) {
-            throw new IllegalArgumentException("That quiz run is not yours");
+            throw new IllegalArgumentException(ServerText.t("err_run_not_yours", "That quiz run is not yours"));
         }
         if (Objects.isNull(run.getTotalAnswers())) {
-            throw new IllegalArgumentException("That quiz run has no score to enter");
+            throw new IllegalArgumentException(ServerText.t("err_run_no_score_to_enter", "That quiz run has no score to enter"));
         }
         // One run counts once, whatever the client reports; the unique key says the same thing.
         if (attemptRepository.findByHistoryId(historyId).isPresent()) {
-            throw new IllegalArgumentException("That quiz run has already been entered");
+            throw new IllegalArgumentException(ServerText.t("err_run_already_entered", "That quiz run has already been entered"));
         }
 
         attemptRepository.save(ConquestAttempt.builder()
@@ -253,16 +254,17 @@ public class ConquestServiceImpl implements ConquestService {
     private String blockedReason(final Category country, final boolean isOpen, final boolean roundOpen,
                                  final Long accountId, final LocalDateTime now) {
         if (!roundOpen) {
-            return "Conquest is closed today";
+            return ServerText.t("conquest_blocked_closed", "Conquest is closed today");
         }
         if (!isOpen) {
-            return "Not open this round";
+            return ServerText.t("conquest_blocked_not_open", "Not open this round");
         }
         if (Objects.isNull(accountId)) {
-            return "Sign in to take part";
+            return ServerText.t("conquest_blocked_sign_in", "Sign in to take part");
         }
         return cooldownLeft(country.getCatId(), accountId, now)
-                .map(left -> "Another go in " + left.toHours() + "h " + left.toMinutesPart() + "m")
+                .map(left -> ServerText.t("conquest_blocked_cooldown", "Another go in {{hours}}h {{minutes}}m",
+                        "hours", left.toHours(), "minutes", left.toMinutesPart()))
                 .orElse(null);
     }
 

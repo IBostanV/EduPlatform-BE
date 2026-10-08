@@ -33,6 +33,16 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseReco
             """)
     List<KnowledgeBaseRecord> findPublished(Long categoryId, String query);
 
+    /** Published articles in these categories, most helpful first: the first per category is its best. */
+    @Query("SELECT r FROM KnowledgeBaseRecord r WHERE r.category.catId IN :categoryIds AND" + PUBLISHED
+            + " ORDER BY r.upvotes DESC NULLS LAST, r.createdDate DESC")
+    List<KnowledgeBaseRecord> findPublishedIn(java.util.Collection<Long> categoryIds);
+
+    /** What a player wrote that readers may see, newest first, for their profile. */
+    @Query("SELECT r FROM KnowledgeBaseRecord r LEFT JOIN FETCH r.category WHERE r.createdBy.accountId = :accountId AND"
+            + PUBLISHED + " ORDER BY r.createdDate DESC")
+    List<KnowledgeBaseRecord> findPublishedBy(Long accountId);
+
     @Query("SELECT r.id FROM KnowledgeBaseRecord r WHERE" + PUBLISHED + " ORDER BY r.id")
     List<Long> findPublishedIds();
 

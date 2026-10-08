@@ -2,6 +2,9 @@ package com.play.quiz.daily;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import com.play.quiz.domain.Quiz;
@@ -21,6 +24,13 @@ class DailyTaskTest {
         assertEquals(3, DailyTask.PLAY_QUIZZES.progressFrom(runs));
         assertEquals(18, DailyTask.RIGHT_ANSWERS.progressFrom(runs));
         assertEquals(1, DailyTask.FLAWLESS_RUN.progressFrom(runs));
+    }
+
+    @Test
+    void given_a_player_ahead_of_the_server_then_their_day_starts_on_the_servers_day_before() {
+        // Midnight on 8 October at UTC+14 is 10:00 on the 7th on a UTC server.
+        assertEquals(LocalDateTime.of(2026, 10, 7, 10, 0), DailyTaskService.serverTime(
+                LocalDate.of(2026, 10, 8), ZoneId.of("Pacific/Kiritimati"), ZoneId.of("UTC")));
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.play.quiz.daily;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -22,8 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
  * it is read: nothing is counted up as a player plays, so this is the only moment there is, and
  * it needs no job that could miss a day or fire twice.
  *
- * <p>The day is the server's own day (the history rows it compares against are written with the
- * same clock), and it starts over at midnight with nothing to reset.
+ * <p>The day is the player's own, midnight to midnight in their time zone, and it starts over with
+ * nothing to reset. The history rows it compares against are written with the server's clock, so
+ * the day's bounds are turned into server time to find them; claims are kept under the player's date.
  */
 @Log4j2
 @Service
@@ -37,16 +40,22 @@ public class DailyTaskService {
 
     // Not read-only: what it reads is what pays.
     @Transactional
-    public List<DailyTaskProgress> getToday() {
+    public List<DailyTaskProgress> getToday(final ZoneId zone) {
         Account player = userService.findByEmail(authenticationFacade.getPrincipal().getUsername());
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(zone);
         List<UserQuizHistory> runs = historyRepository.findRunsBetween(
-                player.getAccountId(), today.atStartOfDay(), today.plusDays(1).atStartOfDay());
+                player.getAccountId(), serverTime(today, zone, ZoneId.systemDefault()),
+                serverTime(today.plusDays(1), zone, ZoneId.systemDefault()));
         Set<String> paid = Set.copyOf(claimRepository.findClaimedCodes(player.getAccountId(), today));
 
         return Arrays.stream(DailyTask.values())
                 .map(task -> progressOf(task, player.getAccountId(), today, runs, paid))
                 .toList();
+    }
+
+    /** The start of the player's day, in the server's clock the history rows are written with. */
+    static LocalDateTime serverTime(final LocalDate day, final ZoneId zone, final ZoneId server) {
+        return day.atStartOfDay(zone).withZoneSameInstant(server).toLocalDateTime();
     }
 
     private DailyTaskProgress progressOf(final DailyTask task, final Long accountId, final LocalDate today,

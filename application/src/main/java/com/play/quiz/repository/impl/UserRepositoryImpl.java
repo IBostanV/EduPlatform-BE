@@ -319,6 +319,8 @@ public class UserRepositoryImpl implements UserRepository {
         return Account.builder()
                 .birthday(getBirthday(accountRow))
                 .name((String) accountRow.get("NAME"))
+                .surname((String) accountRow.get("SURNAME"))
+                .username((String) accountRow.get("USERNAME"))
                 .email((String) accountRow.get(EMAIL.toUpperCase()))
                 .isEnabled(ONE.equals((accountRow.get("IS_ENABLED"))))
                 .accountId(((BigDecimal) accountRow.get("ACCOUNT_ID")).longValue())

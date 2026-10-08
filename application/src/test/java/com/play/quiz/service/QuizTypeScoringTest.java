@@ -19,6 +19,7 @@ import com.play.quiz.domain.Glossary;
 import com.play.quiz.domain.Question;
 import com.play.quiz.domain.Quiz;
 import com.play.quiz.domain.UserQuizHistory;
+import com.play.quiz.domain.translation.AnswerTranslation;
 import com.play.quiz.dto.GlossaryDto;
 import com.play.quiz.dto.wrapper.HistoryAnswer;
 import com.play.quiz.fixtures.AccountFixture;
@@ -26,6 +27,7 @@ import com.play.quiz.fixtures.QuizTypeFixture;
 import com.play.quiz.mapper.UserQuizHistoryMapperImpl;
 import com.play.quiz.repository.QuizRepository;
 import com.play.quiz.repository.QuizTypeRepository;
+import com.play.quiz.repository.translation.AnswerTranslationRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.impl.UserQuizHistoryServiceImpl;
@@ -49,6 +51,7 @@ class QuizTypeScoringTest {
     @Mock private QuizTypeRepository quizTypeRepository;
     @Mock private CustomQuizService customQuizService;
     @Mock private ConquestAttemptRepository conquestAttemptRepository;
+    @Mock private AnswerTranslationRepository answerTranslationRepository;
 
     private UserQuizHistoryService historyService;
 
@@ -62,7 +65,8 @@ class QuizTypeScoringTest {
     void init() {
         historyService = new UserQuizHistoryServiceImpl(userService, questionService, glossaryService,
                 new UserQuizHistoryMapperImpl(), authenticationFacade, userQuizHistoryRepository, quizRepository,
-                quizTypeRepository, customQuizService, conquestAttemptRepository);
+                quizTypeRepository, customQuizService, conquestAttemptRepository, answerTranslationRepository,
+                org.mockito.Mockito.mock(com.play.quiz.review.ReviewService.class));
         lenient().when(glossaryService.getById(any())).thenAnswer(call -> TERMS.get(call.<Long>getArgument(0)));
     }
 
@@ -70,6 +74,13 @@ class QuizTypeScoringTest {
     void input_is_right_whatever_the_case_and_spacing() {
         assertNull(score("INPUT", "\"  68 \"").getRightAnswer());
         assertEquals("68", score("INPUT", "\"67\"").getRightAnswer());
+    }
+
+    @Test
+    void input_is_also_right_in_a_translation() {
+        when(answerTranslationRepository.findAllByAnswer_AnsIdIn(any())).thenReturn(List.of(
+                AnswerTranslation.builder().description("Saizeci si opt").build()));
+        assertNull(score("INPUT", "\"saizeci si  opt\"").getRightAnswer());
     }
 
     @Test

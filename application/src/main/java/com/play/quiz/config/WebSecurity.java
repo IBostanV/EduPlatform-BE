@@ -1,6 +1,7 @@
 package com.play.quiz.config;
 
 import static com.play.quiz.controller.RestEndpoint.CONTEXT_PATH;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_BACKGROUND;
 import static com.play.quiz.controller.RestEndpoint.QUIZ_CUSTOM;
 import static com.play.quiz.controller.RestEndpoint.QUIZ_TYPES;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_AUTH;
@@ -8,6 +9,7 @@ import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CATEGORY;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CLIENT_ERROR;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_DONATION;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_CONQUEST;
+import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_ANNOUNCEMENT;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_FEED;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_LEADERBOARD;
 import static com.play.quiz.controller.RestEndpoint.REQUEST_MAPPING_FEEDBACK;
@@ -166,8 +168,19 @@ public class WebSecurity {
                         // may delete what.
                         .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_FEED + "/news").permitAll()
 
+                        // Announcements: every player reads and dismisses their own unseen ones;
+                        // listing all, sending and deleting are admin-only.
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_ANNOUNCEMENT + "/unseen",
+                                CONTEXT_PATH + REQUEST_MAPPING_ANNOUNCEMENT + "/*/seen").authenticated()
+                        .requestMatchers(CONTEXT_PATH + REQUEST_MAPPING_ANNOUNCEMENT,
+                                CONTEXT_PATH + REQUEST_MAPPING_ANNOUNCEMENT + "/**").hasRole(ADMIN)
+
                         // The leaderboards are the home page's, so a guest reads them too.
                         .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_LEADERBOARD).permitAll()
+
+                        // A player's uploaded background, fetched by a stylesheet's url() (no
+                        // Authorization header) at an address nobody can guess.
+                        .requestMatchers(HttpMethod.GET, CONTEXT_PATH + REQUEST_MAPPING_BACKGROUND + "/*").permitAll()
 
                         // Managing the accounts themselves: emails, roles, blocking, deleting.
                         // The rest of /user is the signed-in player's own account, below.

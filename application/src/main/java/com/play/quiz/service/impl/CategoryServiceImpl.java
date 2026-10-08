@@ -9,6 +9,7 @@ import com.play.quiz.exception.RecordNotFoundException;
 import com.play.quiz.mapper.CategoryMapper;
 import com.play.quiz.repository.CategoryRepository;
 import com.play.quiz.service.CategoryService;
+import com.play.quiz.util.ServerText;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -47,7 +48,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RecordNotFoundException("No records found by category id: " + categoryId));
         if (Objects.equals(changes.getParentId(), categoryId)) {
-            throw new IllegalArgumentException("A category cannot be its own parent");
+            throw new IllegalArgumentException(ServerText.t("err_category_own_parent", "A category cannot be its own parent"));
         }
 
         Category updated = category.toBuilder()

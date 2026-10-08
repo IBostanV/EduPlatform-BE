@@ -13,6 +13,7 @@ import com.play.quiz.record.FeedbackInput;
 import com.play.quiz.record.FeedbackStatus;
 import com.play.quiz.security.FeedbackRateLimiter;
 import com.play.quiz.service.FeedbackService;
+import com.play.quiz.util.ServerText;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,7 @@ public class FeedbackController {
         String sender = Objects.nonNull(principal) ? principal.getName() : request.getRemoteAddr();
         if (!rateLimiter.tryAcquire(sender)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body("You have sent several messages in a short time. Please try again in a few minutes.");
+                    .body(ServerText.t("err_feedback_rate_limited", "You have sent several messages in a short time. Please try again in a few minutes."));
         }
         return ResponseEntity.ok(feedbackService.send(input, screenshot));
     }

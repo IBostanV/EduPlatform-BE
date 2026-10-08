@@ -13,6 +13,7 @@ import com.play.quiz.repository.UserGroupRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserGroupService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
@@ -74,7 +75,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         // Checked before querying: an empty IN () is invalid SQL.
         Set<Account> participants = ids.isEmpty() ? new HashSet<>() : new HashSet<>(userRepository.findByUserIds(ids));
         if (participants.isEmpty()) {
-            throw new IllegalArgumentException("A group needs at least one other participant");
+            throw new IllegalArgumentException(ServerText.t("err_group_needs_participant", "A group needs at least one other participant"));
         }
         participants.add(creator);
 
@@ -101,7 +102,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     public void deleteGroup(Long groupId) {
         String username = authenticationFacade.getPrincipal().getUsername();
         if (!userGroupRepository.isMember(groupId, username)) {
-            throw new AccessDeniedException("Only members can delete group " + groupId);
+            throw new AccessDeniedException(ServerText.t("err_group_delete_denied", "Only members can delete group {{id}}", "id", groupId));
         }
 
         log.info("Deleting message group {}", groupId);
@@ -125,7 +126,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     public void setMuted(Long groupId, boolean muted) {
         String username = authenticationFacade.getPrincipal().getUsername();
         if (userGroupRepository.setMuted(groupId, username, muted) == 0) {
-            throw new AccessDeniedException("Only members can mute group " + groupId);
+            throw new AccessDeniedException(ServerText.t("err_group_mute_denied", "Only members can mute group {{id}}", "id", groupId));
         }
         log.info("Message group {} muted: {}", groupId, muted);
     }
@@ -139,14 +140,14 @@ public class UserGroupServiceImpl implements UserGroupService {
     public void setPhoto(Long groupId, final MultipartFile photo) {
         String username = authenticationFacade.getPrincipal().getUsername();
         if (!userGroupRepository.isMember(groupId, username)) {
-            throw new AccessDeniedException("Only members can set the picture of group " + groupId);
+            throw new AccessDeniedException(ServerText.t("err_group_picture_denied", "Only members can set the picture of group {{id}}", "id", groupId));
         }
 
         MessageGroup group = messageGroupRepository.findById(groupId)
                 .orElseThrow(() -> new RecordNotFoundException("No group with id: " + groupId));
         boolean given = Objects.nonNull(photo) && !photo.isEmpty();
         if (given && !String.valueOf(photo.getContentType()).startsWith("image/")) {
-            throw new IllegalArgumentException("A group picture has to be an image");
+            throw new IllegalArgumentException(ServerText.t("err_group_picture_not_image", "A group picture has to be an image"));
         }
 
         messageGroupRepository.save(group.toBuilder()
@@ -160,7 +161,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         try {
             return photo.getBytes();
         } catch (IOException exception) {
-            throw new IllegalArgumentException("Could not read the group picture", exception);
+            throw new IllegalArgumentException(ServerText.t("err_group_picture_unreadable", "Could not read the group picture"), exception);
         }
     }
 }

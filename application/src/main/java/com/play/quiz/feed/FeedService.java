@@ -22,6 +22,8 @@ import com.play.quiz.domain.Account;
 import com.play.quiz.domain.Category;
 import com.play.quiz.enums.UserRole;
 import com.play.quiz.exception.RecordNotFoundException;
+import com.play.quiz.duel.DuelService;
+import com.play.quiz.group.GroupService;
 import com.play.quiz.record.UserSummary;
 import com.play.quiz.social.ChallengeService;
 import com.play.quiz.repository.AccountRepository;
@@ -33,6 +35,7 @@ import com.play.quiz.trophy.EarnedTrophyRepository;
 import com.play.quiz.trophy.TrophyCatalog;
 import com.play.quiz.trophy.TrophyDefinition;
 import com.play.quiz.trophy.TrophyService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
@@ -73,6 +76,8 @@ public class FeedService {
     private final NewsPostRepository newsPostRepository;
     private final WorldNews worldNews;
     private final ChallengeService challengeService;
+    private final GroupService groupService;
+    private final DuelService duelService;
     private final Clock clock;
 
     /** The signed-in player's notifications, newest first, with how many are unread. */
@@ -135,6 +140,10 @@ public class FeedService {
         }
 
         items.addAll(challengeService.notificationsFor(accountId, since));
+        items.addAll(groupService.requestNotificationsFor(accountId, since));
+        items.addAll(groupService.approvalNotificationsFor(accountId, since));
+        items.addAll(groupService.commentNotificationsFor(accountId, since));
+        items.addAll(duelService.notificationsFor(accountId, since));
 
         // Nothing read yet counts everything: a new account's first look shows the lot as new.
         LocalDateTime readAt = accountRepository.findNotificationsReadAt(accountId);
@@ -191,7 +200,7 @@ public class FeedService {
     public Set<FeedItem.Type> hideNews(final Set<FeedItem.Type> hidden) {
         Set<FeedItem.Type> kinds = Objects.isNull(hidden) ? Set.of() : hidden;
         if (!FeedItem.Type.NEWS.containsAll(kinds)) {
-            throw new IllegalArgumentException("Only news can be hidden: " + FeedItem.Type.NEWS);
+            throw new IllegalArgumentException(ServerText.t("err_only_news_hidden", "Only news can be hidden: {{type}}", "type", FeedItem.Type.NEWS));
         }
         String stored = kinds.stream().map(Enum::name).sorted().collect(Collectors.joining(","));
         Long accountId = currentAccount().getAccountId();
@@ -219,7 +228,7 @@ public class FeedService {
     @Transactional
     public FeedItem post(final NewsInput input) {
         if (Objects.isNull(input) || Objects.isNull(input.title()) || input.title().isBlank()) {
-            throw new IllegalArgumentException("A post needs a title");
+            throw new IllegalArgumentException(ServerText.t("err_post_needs_title", "A post needs a title"));
         }
         String title = input.title().strip();
         String content = Optional.ofNullable(input.content()).map(String::strip)
@@ -227,8 +236,8 @@ public class FeedService {
                 .orElse(null);
         // Q_NEWS.TITLE and CONTENT; longer would fail in the database instead.
         if (title.length() > MAX_TITLE || (Objects.nonNull(content) && content.length() > MAX_CONTENT)) {
-            throw new IllegalArgumentException("A post can have at most " + MAX_TITLE
-                    + " characters of title and " + MAX_CONTENT + " of text");
+            throw new IllegalArgumentException(ServerText.t("err_post_too_long", "A post can have at most {{title}} characters of title and {{text}} of text",
+                    "title", MAX_TITLE, "text", MAX_CONTENT));
         }
         Account author = currentAccount();
         NewsPost post = newsPostRepository.save(NewsPost.builder()
@@ -249,7 +258,7 @@ public class FeedService {
         NewsPost post = newsPostRepository.findById(newsId)
                 .orElseThrow(() -> new RecordNotFoundException("No post with id: " + newsId));
         if (!isAdmin() && !Objects.equals(post.getCreatedBy(), currentAccount().getAccountId())) {
-            throw new AccessDeniedException("Only its author or an admin can delete post " + newsId);
+            throw new AccessDeniedException(ServerText.t("err_delete_post_denied", "Only its author or an admin can delete post {{id}}", "id", newsId));
         }
         newsPostRepository.delete(post);
         log.info("News post {} by account {} deleted", newsId, post.getCreatedBy());

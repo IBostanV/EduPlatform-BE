@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.play.quiz.domain.Property;
 import com.play.quiz.repository.PropertyRepository;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -44,7 +45,7 @@ public class DonationService {
     public DonationSettings save(final DonationSettings settings) {
         String json = toJson(settings);
         if (json.length() > VALUE_LIMIT) {
-            throw new IllegalArgumentException("Too much to store: remove a wallet or shorten the names");
+            throw new IllegalArgumentException(ServerText.t("err_donation_too_much", "Too much to store: remove a wallet or shorten the names"));
         }
         Property existing = propertyRepository.findByName(PROPERTY_NAME);
         Property property = Objects.isNull(existing)
@@ -60,7 +61,7 @@ public class DonationService {
         try {
             return objectMapper.writeValueAsString(settings);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Donation settings could not be stored", exception);
+            throw new IllegalArgumentException(ServerText.t("err_donation_not_stored", "Donation settings could not be stored"), exception);
         }
     }
 }

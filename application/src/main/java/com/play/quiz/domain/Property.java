@@ -27,7 +27,7 @@ import org.hibernate.Hibernate;
 public class Property extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "prop_generator")
-    @SequenceGenerator(name = "prop_generator", sequenceName = "prop_sequence", allocationSize = 1)
+    @SequenceGenerator(name = "prop_generator", sequenceName = "property_seq", allocationSize = 1)
     private Long propertyId;
     private String name;
     private String value;

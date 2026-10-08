@@ -12,6 +12,7 @@ import com.play.quiz.repository.AnswerRepository;
 import com.play.quiz.repository.GlossaryRepository;
 import com.play.quiz.repository.GlossaryTypeRepository;
 import com.play.quiz.service.GlossaryService;
+import com.play.quiz.util.ServerText;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -53,7 +54,7 @@ public class GlossaryServiceImpl implements GlossaryService {
 
         if (!Objects.equals(savedWithoutAttachmentResult, SAVE_OPERATION_SUCCESSFULLY)) {
             log.warn("Glossary id: {} not updated, rows affected: {}", glossary.getTermId(), savedWithoutAttachmentResult);
-            throw new EntityNotUpdatedException("Exception during glossary saving");
+            throw new EntityNotUpdatedException(ServerText.t("err_glossary_not_saved", "Exception during glossary saving"));
         }
 
         log.info("Updated glossary id: {} keeping its attachment", glossary.getTermId());
@@ -120,8 +121,9 @@ public class GlossaryServiceImpl implements GlossaryService {
     public void deleteGlossaryType(final Long typeId) {
         long usedBy = glossaryTypeRepository.countGlossariesUsing(typeId);
         if (usedBy > 0) {
-            throw new IllegalArgumentException("This type is used by " + usedBy
-                    + " glossar" + (usedBy == 1 ? "y" : "ies") + ". Change their type first.");
+            throw new IllegalArgumentException(usedBy == 1
+                    ? ServerText.t("err_glossary_type_used_one", "This type is used by 1 glossary. Change their type first.")
+                    : ServerText.t("err_glossary_type_used", "This type is used by {{count}} glossaries. Change their type first.", "count", usedBy));
         }
         glossaryTypeRepository.deleteById(typeId);
         log.info("Deleted glossary type id: {}", typeId);
@@ -134,13 +136,15 @@ public class GlossaryServiceImpl implements GlossaryService {
     public void deleteGlossary(final Long glossaryId) {
         long answers = answerRepository.countUsingGlossary(glossaryId);
         if (answers > 0) {
-            throw new IllegalArgumentException("This glossary is the answer to " + answers
-                    + " question" + (answers == 1 ? "" : "s") + ". Delete or change those questions first.");
+            throw new IllegalArgumentException(answers == 1
+                    ? ServerText.t("err_glossary_answer_one", "This glossary is the answer to 1 question. Delete or change those questions first.")
+                    : ServerText.t("err_glossary_answer", "This glossary is the answer to {{count}} questions. Delete or change those questions first.", "count", answers));
         }
         long children = glossaryRepository.countChildren(glossaryId);
         if (children > 0) {
-            throw new IllegalArgumentException("This glossary is the parent of " + children
-                    + " other glossar" + (children == 1 ? "y" : "ies") + ". Move or delete them first.");
+            throw new IllegalArgumentException(children == 1
+                    ? ServerText.t("err_glossary_parent_one", "This glossary is the parent of 1 other glossary. Move or delete them first.")
+                    : ServerText.t("err_glossary_parent", "This glossary is the parent of {{count}} other glossaries. Move or delete them first.", "count", children));
         }
         glossaryRepository.deleteById(glossaryId);
         log.info("Deleted glossary id: {}", glossaryId);

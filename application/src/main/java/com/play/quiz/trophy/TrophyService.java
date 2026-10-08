@@ -15,6 +15,7 @@ import com.play.quiz.repository.AccountRepository;
 import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.UserService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -75,7 +76,7 @@ public class TrophyService {
 
         boolean clearing = Objects.isNull(code) || code.isBlank();
         if (!clearing && shelf.stream().noneMatch(trophy -> trophy.earned() && trophy.code().equals(code))) {
-            throw new IllegalArgumentException("That trophy has not been earned");
+            throw new IllegalArgumentException(ServerText.t("err_trophy_not_earned", "That trophy has not been earned"));
         }
 
         accountRepository.setPreferredTrophy(player.getAccountId(), clearing ? null : code);

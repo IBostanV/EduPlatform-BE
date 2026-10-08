@@ -29,6 +29,12 @@ public interface UserQuizHistoryRepository extends JpaRepository<UserQuizHistory
             countQuery = "SELECT COUNT(h) FROM UserQuizHistory h WHERE h.account.email = :email")
     Page<UserQuizHistory> findOwnHistory(String email, Pageable pageable);
 
+    // The same, for another player's profile.
+    @Query(value = "SELECT h FROM UserQuizHistory h JOIN FETCH h.quiz q LEFT JOIN FETCH q.category"
+            + " LEFT JOIN FETCH q.type WHERE h.account.accountId = :accountId",
+            countQuery = "SELECT COUNT(h) FROM UserQuizHistory h WHERE h.account.accountId = :accountId")
+    Page<UserQuizHistory> findHistoryOf(Long accountId, Pageable pageable);
+
     /**
      * What every one of a player's runs adds up to — the whole history, not the page on screen.
      *

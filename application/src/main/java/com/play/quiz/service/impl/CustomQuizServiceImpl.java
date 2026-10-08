@@ -43,6 +43,7 @@ import com.play.quiz.repository.UserQuizHistoryRepository;
 import com.play.quiz.repository.UserRepository;
 import com.play.quiz.security.AuthenticationFacade;
 import com.play.quiz.service.CustomQuizService;
+import com.play.quiz.util.ServerText;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.AccessDeniedException;
@@ -94,7 +95,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         // Checked before anything is saved: a question that does not fit its type is unplayable.
         QuizType quizType = quizTypeRepository.findById(customQuizDto.getQuizTypeId())
                 .filter(type -> CUSTOM_QUIZ_TYPES.containsKey(type.getName()))
-                .orElseThrow(() -> new IllegalArgumentException("This quiz type is not available for a custom quiz"));
+                .orElseThrow(() -> new IllegalArgumentException(ServerText.t("err_quiz_type_not_custom", "This quiz type is not available for a custom quiz")));
         checkQuestionsFit(quizType, customQuizDto.getQuestions());
 
         Account creator = getCurrentAccount();
@@ -145,7 +146,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
         String username = authenticationFacade.getPrincipal().getUsername();
         if (!canManage(quiz, username)
                 && !quizInviteRepository.existsByQuiz_QuizIdAndAccount_Email(quizId, username)) {
-            throw new AccessDeniedException("Only the quiz's creator and the people invited can play it");
+            throw new AccessDeniedException(ServerText.t("err_custom_quiz_play_denied", "Only the quiz's creator and the people invited can play it"));
         }
 
         boolean typed = INPUT.equals(quiz.getType().getName());
@@ -204,7 +205,7 @@ public class CustomQuizServiceImpl implements CustomQuizService {
                 .orElseThrow(() -> new RecordNotFoundException("No custom quiz with id: " + quizId));
 
         if (!canManage(quiz, authenticationFacade.getPrincipal().getUsername())) {
-            throw new AccessDeniedException("Only the quiz's creator and the admins can delete it");
+            throw new AccessDeniedException(ServerText.t("err_custom_quiz_delete_denied", "Only the quiz's creator and the admins can delete it"));
         }
 
         // Everything pointing at the quiz goes first: the runs of it (whose results it would
@@ -322,8 +323,8 @@ public class CustomQuizServiceImpl implements CustomQuizService {
             int wrong = Optional.ofNullable(question.getWrongAnswers()).map(List::size).orElse(0);
             if (right < shape.minRight() || right > shape.maxRight()
                     || wrong < shape.minWrong() || wrong > shape.maxWrong()) {
-                throw new IllegalArgumentException(
-                        "\"" + question.getContent() + "\" does not fit a " + quizType.getName() + " quiz");
+                throw new IllegalArgumentException(ServerText.t("err_question_unfit_type", "\"{{question}}\" does not fit a {{type}} quiz",
+                        "question", question.getContent(), "type", quizType.getName()));
             }
         });
     }
